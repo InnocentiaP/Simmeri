@@ -1,70 +1,56 @@
-## Simmeri Landing Page + Early Access Capture
+## Fix broken mascot crops on Simmeri landing
 
-A cozy, editorial marketing page for Simmeri ("Your cozy cooking companion") starring Simi the Kitchen Ducky, with a working "Join the Early Access" form backed by Lovable Cloud.
+The `SimiSpot` component crops character-sheet PNGs by percentage, which leaks neighbouring cells ("In-App Us…", "age Ideas", "Peeki the…", "cook!", etc.) into every place a mascot appears. The user has now supplied three clean transparent assets that replace the need for any crop math:
 
-### Visual system (from brief)
-- Palette: warm cream `#F7F0E3`, warm white `#FFFDF8`, deep olive `#485226`, olive `#6F7B3A`, sage `#A9B884`, caramel `#B77A45`, terracotta `#C86F4A`, cocoa `#6E4937`, Simi yellow `#FFD66B`, text browns `#4A372D` / `#7B6A5F`, border `#DDCDB8`. All tokens land in `src/styles.css` as OKLCH semantic variables (background, foreground, primary=deep olive, secondary=cream, accent=caramel, destructive=terracotta, etc.) plus custom brand tokens for sage/cocoa/simi-yellow/border-beige and gradient/shadow tokens (`--shadow-cozy`, `--gradient-cream`).
-- Type: Fraunces (headings) + DM Sans (body), Caveat for small handwritten annotations only. Loaded via `<link>` in `__root.tsx` head.
-- Motifs: rounded organic shapes, layered paper cards, soft shadows, hand-drawn leaves/steam/sparkles, generous whitespace. Subtle scroll reveals and hovers with Motion for React; respect `prefers-reduced-motion`.
+- `Simmeri_Logo-2.png` — wordmark + Simi in a pot (for navbar/footer branding)
+- `Simi_Official_Fullbody_Transparent.png-2.png` — full body Simi with spoon + "My Recipes"
+- `Simi_Official_Head_Transparent.png-2.png` — head sticker (small spots, chips, form states)
 
-### Assets
-- Register the three uploaded images as Lovable Assets so they're served from CDN (not copied into the repo):
-  - `Simi.png` (character sheet — used cropped for expressions/pose spots)
-  - `Simi2.png` (in-app usage panels — reused in Product Preview / How It Works)
-  - `ChatGPT_Image_...png` (hero full-body Simi with spoon + "My Recipes")
-- Favicon: derive a small square PNG from the hero Simi via `imagegen--edit_image`, place in `public/favicon.png`, wire in `__root.tsx`, delete default `public/favicon.ico`.
-- Generate a couple of supplementary illustration spots (soft leaf/steam SVGs inline, plus one warm dish photo via `imagegen--generate_image` for the "Remember" section) — kept minimal.
+No section rebuild — just swap asset sources, delete the crop system, and replace two "mascot-in-a-frame" panels with coded UI that actually shows the product.
 
-### Page structure (single route: `src/routes/index.tsx`, replacing placeholder)
-Sections built as small components under `src/components/landing/`:
-1. `Navbar` — sticky, translucent cream, wordmark + tiny Simi head, center links (Features, How It Works, Tonight's Deck, Meal Planning, FAQ), Log In (ghost) + Start Cooking (primary olive).
-2. `Hero` — 2-col: eyebrow + "Turn saved recipes into meals you'll actually cook." + supporting copy + CTAs (Start Cooking with Simi / See How It Works) + trust microcopy. Right: layered dashboard mock card with greeting "Good evening, Maya.", Ready-to-Cook / Almost Ready chips, Simi helper bubble, floating recipe cards, hero Simi PNG overlapping. Organic sage blob behind.
-3. `UserProblems` — heading "Your recipes are saved. Dinner is still undecided." + 4 problem cards (Scattered / Decision Fatigue / Forgotten Ingredients / Disconnected Planning) with small icons; Simi holding overflowing papers on one side transitioning to organized notebook.
-4. `ValueProp` — Capture → Review → Decide → Plan → Shop → Cook → Remember timeline (horizontal on desktop, vertical on mobile) with icons and one-liners; highlighted quote "Simmeri helps you make cooking decisions—not just collect more recipes."
-5. `CoreFeatures` — bento grid of 6 features (Recipe Library, Kitchen Inventory, Tonight's Deck, Meal Plan, Shopping List, Cooking History) mixing sizes.
-6. `HowItWorks` — numbered 4-step editorial rows with alternating image/text (uses cropped Simi2 panels).
-7. `ProductPreview` — split: mobile mockup (Tonight's Deck card) + tablet mockup (Kitchen inventory list) built in JSX using tokens.
-8. `TonightsDeck` — dark cocoa panel: 3 stacked recipe cards with swipe-style controls (X / star / heart), Simi peeking from behind.
-9. `UseCases` — 4 short scenarios (Weeknight solo, Family week, Empty-fridge night, Rediscovery).
-10. `Benefits` — 6 short benefits in soft cards.
-11. `TrustControl` — Simi with checklist; bullets on private data, no ads, export anytime.
-12. `WhoItIsFor` — chips: Students, Professionals, Couples, Families, Casual cooks.
-13. `FAQ` — shadcn Accordion, 6–8 items.
-14. `FinalCTA` — full-body Simi + `EarlyAccessForm` (email input + "Join the Early Access" button + success state with Simi "Proud" pose).
-15. `Footer` — cocoa background, wordmark, small links, copyright, tiny sleepy Simi.
+### Assets to register first (via `lovable-assets`)
+- `src/assets/simi-logo.png.asset.json` ← `Simmeri_Logo-2.png`
+- `src/assets/simi-fullbody.png.asset.json` ← `Simi_Official_Fullbody_Transparent.png-2.png`
+- `src/assets/simi-head.png.asset.json` ← `Simi_Official_Head_Transparent.png-2.png`
+- Regenerate `public/favicon.png` from the new head sticker (tight square crop).
+- Keep existing `simi-hero.png` pointer (already the correct full-body art) — use the new fullbody asset as the canonical replacement and retire `simi-hero`, `simi-sheet`, `simi-usage` pointers at the end.
 
-### Early access capture (Lovable Cloud)
-- Enable Lovable Cloud (Supabase under the hood).
-- Migration creates `public.early_access_signups`:
+### Component-by-component changes
 
-  ```text
-  id uuid pk default gen_random_uuid()
-  email citext not null unique
-  source text default 'landing_final_cta'
-  created_at timestamptz default now()
-  ```
+**`SimiSpot.tsx`** — Delete the crop-math version. Replace with a tiny component that just renders the head-sticker PNG at a given size with an `alt`. All existing `pose="…"` props become ignored (single art, kept as an optional label). This alone fixes every circled crop in Hero helper bubble, Problems arrow row, Planning helper, TonightsDeck peek, Footer, FinalCTA, EarlyAccessForm state icons, Navbar mark.
 
-  RLS enabled. Grants: `GRANT INSERT ON public.early_access_signups TO anon, authenticated;` and `GRANT ALL TO service_role;` — no SELECT to anon/authenticated (list stays private). Policy: `create policy "anyone can join early access" for insert to anon, authenticated with check (true);`
-- Client submission goes through the generated browser Supabase client (`@/integrations/supabase/client`) directly from `EarlyAccessForm` — a simple insert with duplicate-email graceful message ("You're already on the list — Simi remembers you 🧡"). Zod validates the email before submit. Loading, success, and error states use Simi expressions from the sprite sheet.
-- No auth flow, no login page — CTAs that say "Log In" / "Start Cooking with Simi" scroll to the early-access form for now (documented as such).
+**`Navbar.tsx`** — Replace the cropped head with the head-sticker asset at 28px next to the wordmark. Circled in hero screenshot.
 
-### SEO / head
-- Update `index.tsx` `head()`: title "Simmeri — Your cozy cooking companion", description from brief, `og:type=website`, `twitter:card=summary_large_image`. No `og:image` (hosting supplies screenshot).
-- Single H1 in Hero. Semantic `<section>` + `aria-labelledby`. Alt text on all Simi imagery describing pose. Respects reduced motion.
+**`Hero.tsx`** — Two fixes: (1) the small helper-bubble avatar becomes the head sticker via the new `SimiSpot`; (2) the big overlapping mascot (currently `simi-hero.png`) switches to `simi-fullbody` so it matches the official art and sits transparent over the mock. Keep composition, chips, dashboard card as-is.
 
-### Motion
-- Install `motion` (Motion for React). Subtle: fade+rise on section reveal (IntersectionObserver), Simi gentle bob in hero (2s ease-in-out infinite), steam SVG rising loop, hover lift on cards. All guarded by `useReducedMotion`.
+**`Problems.tsx`** — The "concerned → checking recipes" collage in the screenshot pulls two garbage crops from the sheet. Replace with a coded before/after mini-illustration: a messy stack of paper cards (rotated, olive/cream, "linked recipe", "screenshot", "text note") arrow-transitioning into a single tidy `paper-card` list. No mascot art in the middle. Head sticker can sit small at the corner.
 
-### Files touched
-- `src/styles.css` — palette tokens, gradients, shadows, radius, custom utility for paper texture.
-- `src/routes/__root.tsx` — Google Fonts `<link>`, favicon link, meta cleanup (leave og:image off root).
-- `src/routes/index.tsx` — real landing page + head().
-- `src/components/landing/*.tsx` — Navbar, Hero, UserProblems, ValueProp, CoreFeatures, HowItWorks, ProductPreview, TonightsDeck, UseCases, Benefits, TrustControl, WhoItIsFor, FAQ, FinalCTA, EarlyAccessForm, Footer, plus small `SimiSpot` helper for cropped mascot poses.
-- `src/assets/*.asset.json` — pointers for the three uploaded mascot images.
-- `public/favicon.png` (new), remove `public/favicon.ico`.
-- Cloud migration file for `early_access_signups`.
+**`HowItWorks.tsx`** — All four cards currently show cropped character-sheet cells (circled). Replace each square panel with a **coded product vignette** matching the step, not a mascot portrait:
+- 01 Capture: a small "paste a link" input row + parsed recipe chip
+- 02 Kitchen: 3 inventory rows with Good / Running low / Out chips (matches Meal Planning right panel style)
+- 03 Deck: a mini stacked-cards preview (reuse TonightsDeck card styles at small size)
+- 04 Plan/Shop: mini 7-day strip with 2 slots filled + a "3 items to buy" chip
+Add a small head sticker (real asset) in each corner as a signature, not as the main visual.
 
-### Out of scope (say so at the end)
-- Auth / real Log In flow.
-- Actual product app screens (Kitchen, Deck, Plan) beyond marketing mockups.
-- Admin view of collected emails — visible in Cloud → Tables.
+**`TonightsDeck.tsx`** — The card visual is fine structurally, but the "Simi peeking" crop is broken. Swap to the fullbody sticker peeking from behind the top card at a small size and rotation. Keep dark cocoa panel, stacked cards, swipe icons.
+
+**`Planning.tsx`** — The "This week" panel and Kitchen panel are already coded UI and look correct — preserve them. Only the tiny Simi helper thumbnail inside the "3 items to buy" note is a bad crop; swap to the head sticker at ~40px. No layout change.
+
+**`Trust.tsx`** — The big left panel currently shows a random slice of the usage sheet (circled). Replace with a coded "privacy card": a small phone-frame mock (reuse styles) showing a lock chip, an "Export data" button row, and one Simi head sticker in the corner. No character-sheet crops.
+
+**`FinalCTA.tsx` / `EarlyAccessForm.tsx`** — Replace the mascot art with `simi-fullbody`; keep form logic, success/error states, Cloud insert. State icons switch to the head sticker.
+
+**`Footer.tsx`** — Swap cropped "sleepy Simi" for the head sticker at 24px next to the wordmark.
+
+**Pricing** — Not currently in the page. Out of scope for this pass unless the user wants it added; call it out at the end.
+
+### Preserve unchanged
+`Journey.tsx`, `Features.tsx` (bento), `UseCases.tsx`, `Benefits.tsx`, `WhoFor.tsx`, `FAQ.tsx`, `src/routes/index.tsx`, `src/styles.css`, `src/routes/__root.tsx`, and the `early_access_signups` migration.
+
+### Cleanup after swap
+Delete `src/assets/simi-sheet.png.asset.json` and `src/assets/simi-usage.png.asset.json` (and their CDN objects via `lovable-assets delete`) once no component references them. `simi-hero` gets retired in favor of `simi-fullbody`.
+
+### Out of scope
+- Pricing section (not built yet — flag for a follow-up).
+- Any copy/section-order changes.
+- Auth / real product screens.
