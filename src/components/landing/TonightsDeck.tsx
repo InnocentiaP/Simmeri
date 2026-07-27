@@ -1,5 +1,5 @@
 import { Star, X, Heart, Clock } from "lucide-react";
-import { SimiSpot } from "./SimiSpot";
+import simiFullbody from "@/assets/simi-fullbody.png.asset.json";
 
 const cards = [
   { title: "Creamy mushroom pasta", time: "25 min", tag: "Ready to cook", tone: "bg-cream" },
@@ -93,9 +93,11 @@ export function TonightsDeck() {
               </div>
             ))}
           </div>
-          <div className="absolute -bottom-6 -right-4">
-            <SimiSpot pose="peeking" size={130} alt="Simi peeking from behind the cards" />
-          </div>
+          <img
+            src={simiFullbody.url}
+            alt="Simi peeking from behind the deck of recipe cards"
+            className="pointer-events-none absolute -bottom-8 -right-6 h-36 w-auto rotate-6 drop-shadow-[0_16px_20px_rgba(0,0,0,0.35)] sm:h-44"
+          />
         </div>
       </div>
     </section>

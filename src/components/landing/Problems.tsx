@@ -38,12 +38,33 @@ export function Problems() {
           >
             Your recipes are saved. Dinner is still undecided.
           </h2>
-          <div className="hidden items-end gap-4 md:flex">
-            <SimiSpot pose="concerned" size={110} alt="Simi looking a little overwhelmed" />
-            <span aria-hidden className="mb-8 text-3xl text-cocoa/40">
-              →
-            </span>
-            <SimiSpot pose="checking" size={110} alt="Simi with an organized notebook" />
+          <div className="hidden items-end gap-4 md:flex" aria-hidden>
+            <div className="relative h-28 w-28">
+              {["-rotate-6", "rotate-3", "-rotate-2"].map((r, i) => (
+                <div
+                  key={i}
+                  className={`absolute inset-0 ${r} rounded-xl border border-border/60 bg-cream/80 shadow-[var(--shadow-soft)]`}
+                  style={{ transform: `translate(${i * 6}px, ${i * -4}px) rotate(${i * 6 - 6}deg)` }}
+                >
+                  <div className="mt-3 h-1.5 w-16 rounded-full bg-cocoa/20 mx-3" />
+                  <div className="mt-2 h-1.5 w-10 rounded-full bg-cocoa/15 mx-3" />
+                  <div className="mt-2 h-1.5 w-14 rounded-full bg-cocoa/15 mx-3" />
+                </div>
+              ))}
+            </div>
+            <span className="mb-8 text-3xl text-cocoa/40">→</span>
+            <div className="h-28 w-28 rounded-xl border border-border/70 bg-background p-3 shadow-[var(--shadow-soft)]">
+              <div className="h-2 w-14 rounded-full bg-olive-deep/70" />
+              <div className="mt-2 space-y-1.5">
+                <div className="h-1.5 w-full rounded-full bg-cocoa/20" />
+                <div className="h-1.5 w-4/5 rounded-full bg-cocoa/20" />
+                <div className="h-1.5 w-3/5 rounded-full bg-cocoa/20" />
+                <div className="h-1.5 w-4/6 rounded-full bg-cocoa/20" />
+              </div>
+              <div className="mt-2 flex justify-end">
+                <SimiSpot size={28} alt="" />
+              </div>
+            </div>
           </div>
           <p className="max-w-md text-lg leading-relaxed text-cocoa/85">
             You collect ideas everywhere — but when it&rsquo;s time to cook, those ideas are

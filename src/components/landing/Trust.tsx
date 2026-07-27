@@ -1,4 +1,4 @@
-import { Shield, Lock, Download, Sparkles } from "lucide-react";
+import { Shield, Lock, Download, Sparkles, Check } from "lucide-react";
 import { SimiSpot } from "./SimiSpot";
 
 const points = [
@@ -12,8 +12,48 @@ export function Trust() {
   return (
     <section aria-labelledby="trust-title" className="bg-cream/60 py-24">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 md:grid-cols-[1fr_1.2fr]">
-        <div className="paper-card flex items-center justify-center bg-background p-10">
-          <SimiSpot pose="checklist" size={220} alt="Simi holding a small checklist" />
+        <div className="paper-card relative overflow-hidden bg-background p-8">
+          <div className="mx-auto w-full max-w-xs">
+            <div className="rounded-3xl border border-border/70 bg-cream/50 p-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-olive-deep text-primary-foreground">
+                  <Lock className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="font-display text-base text-coffee">Private by default</p>
+                  <p className="text-[11px] text-cocoa/70">Only you can see your kitchen.</p>
+                </div>
+              </div>
+              <ul className="mt-4 space-y-2">
+                {[
+                  "Your recipe library",
+                  "Cooking history & photos",
+                  "Meal plans & shopping",
+                ].map((label) => (
+                  <li
+                    key={label}
+                    className="flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-coffee"
+                  >
+                    <Check className="h-3.5 w-3.5 text-olive-deep" />
+                    {label}
+                    <span className="ml-auto rounded-full bg-sage/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-olive-deep">
+                      Private
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-olive-deep px-4 py-2.5 text-sm font-medium text-primary-foreground"
+              >
+                <Download className="h-4 w-4" />
+                Export my data
+              </button>
+            </div>
+          </div>
+          <div className="pointer-events-none absolute -bottom-4 -right-4">
+            <SimiSpot size={92} alt="" />
+          </div>
         </div>
         <div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-caramel">
