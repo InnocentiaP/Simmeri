@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from "motion/react";
 import simiFullbody from "@/assets/simi-fullbody.png.asset.json";
+import pastaImg from "/images/simmeri/creamy-mushroom-pasta.jpg?url";
 import { SimiSpot } from "./SimiSpot";
 
 export function Hero() {
@@ -36,14 +37,14 @@ export function Hero() {
               href="#early-access"
               className="inline-flex items-center gap-2 rounded-full bg-olive-deep px-6 py-3 text-base font-medium text-primary-foreground shadow-[var(--shadow-cozy)] transition-transform hover:-translate-y-0.5 hover:bg-olive"
             >
-              Start Cooking with Simi
+              Join the Early Access
               <span aria-hidden>→</span>
             </a>
             <a
               href="#how"
               className="inline-flex items-center gap-2 rounded-full border border-border bg-cream px-6 py-3 text-base font-medium text-cocoa hover:bg-cream-deep/60"
             >
-              See how it works
+              See How It Works
             </a>
           </div>
           <p className="mt-5 text-sm text-muted-foreground">
@@ -79,24 +80,50 @@ export function Hero() {
               </p>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-border/60 bg-cream/60 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-olive">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-border/60 bg-background">
+              <div className="relative aspect-[16/9] w-full">
+                <img
+                  src={pastaImg}
+                  alt="Creamy mushroom pasta ready in the Tonight's Deck"
+                  width={1280}
+                  height={720}
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute left-3 top-3 rounded-full bg-olive-deep px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground">
                   Ready to cook
-                </p>
-                <p className="mt-1 font-display text-base text-coffee">
-                  Creamy mushroom pasta
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">25 min · Cozy</p>
+                </span>
               </div>
+              <div className="flex items-center justify-between p-3">
+                <div>
+                  <p className="font-display text-base leading-tight text-coffee">
+                    Creamy mushroom pasta
+                  </p>
+                  <p className="text-xs text-muted-foreground">25 min · Cozy</p>
+                </div>
+                <span className="rounded-full bg-cream-deep px-2.5 py-1 text-[11px] font-medium text-coffee">
+                  Cook this
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-border/60 bg-cream/60 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-caramel">
                   Almost ready
                 </p>
-                <p className="mt-1 font-display text-base text-coffee">
+                <p className="mt-1 font-display text-sm text-coffee">
                   Lentil harvest soup
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">2 missing · Warm</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">2 missing</p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-cream/60 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-olive">
+                  Cooked before
+                </p>
+                <p className="mt-1 font-display text-sm text-coffee">
+                  Miso-glazed eggplant
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">Loved it</p>
               </div>
             </div>
 

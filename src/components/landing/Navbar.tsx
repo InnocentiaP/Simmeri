@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { SimiSpot } from "./SimiSpot";
 
 const links = [
-  { href: "#features", label: "Features" },
   { href: "#how", label: "How It Works" },
   { href: "#deck", label: "Tonight's Deck" },
   { href: "#planning", label: "Meal Planning" },
+  { href: "#pricing", label: "Plans" },
   { href: "#faq", label: "FAQ" },
 ];
 
