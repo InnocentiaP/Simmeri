@@ -1,23 +1,32 @@
+import savedRecipe from "/images/simmeri/saved-recipe-kitchen.jpg?url";
+import fullFridge from "/images/simmeri/full-fridge-no-ideas.jpg?url";
+import weeklyGrocery from "/images/simmeri/weekly-grocery-planning.jpg?url";
+import familyDinner from "/images/simmeri/family-favorite-dinner.jpg?url";
+
 const cases = [
   {
-    tag: "Solo weeknight",
-    title: "Just me, twenty minutes, and what's in the fridge.",
-    body: "Open Simmeri, hit Tonight's Deck, and cook something you already have. No scroll spiral.",
+    tag: "The Saved Recipe",
+    body: "Finally cook the recipe you saved months ago.",
+    img: savedRecipe,
+    alt: "A home cook consulting a recipe on a tablet while prepping vegetables in a warm kitchen",
   },
   {
-    tag: "Family week",
-    title: "One plan the whole household actually eats.",
-    body: "Drop recipes onto days. Everyone sees the week. The list writes itself.",
+    tag: "Full Fridge, No Ideas",
+    body: "Find recipes that use what you already have.",
+    img: fullFridge,
+    alt: "An open home refrigerator filled with everyday ingredients",
   },
   {
-    tag: "Empty-fridge night",
-    title: "The fridge feels empty. It probably isn't.",
-    body: "Simmeri surfaces the three recipes closest to ready with what you have.",
+    tag: "Weekly Grocery Run",
+    body: "Build your list from the recipes you actually plan to cook.",
+    img: weeklyGrocery,
+    alt: "Fresh groceries on a warm wooden kitchen table with a reusable bag and phone",
   },
   {
-    tag: "Rediscovery",
-    title: "That recipe you loved and forgot about.",
-    body: "Cooking history brings past favorites back — with your own photos and notes.",
+    tag: "Old Favorites",
+    body: "Bring back meals you loved — and remember what worked.",
+    img: familyDinner,
+    alt: "Family and friends sharing a relaxed home-cooked dinner around a wooden table",
   },
 ];
 
@@ -35,16 +44,30 @@ export function UseCases() {
           Different nights. Same calm kitchen.
         </h2>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-2">
+        <div className="mt-12 grid gap-6 md:grid-cols-2">
           {cases.map((c) => (
-            <article key={c.tag} className="paper-card p-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-olive-deep">
-                {c.tag}
-              </p>
-              <h3 className="mt-2 font-display text-2xl leading-tight text-coffee">
-                {c.title}
-              </h3>
-              <p className="mt-2 text-base leading-relaxed text-cocoa/85">{c.body}</p>
+            <article
+              key={c.tag}
+              className="paper-card overflow-hidden bg-background p-0"
+            >
+              <div className="relative aspect-[4/3] w-full overflow-hidden">
+                <img
+                  src={c.img}
+                  alt={c.alt}
+                  loading="lazy"
+                  width={1280}
+                  height={960}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="font-display text-2xl leading-tight text-coffee">
+                  {c.tag}
+                </h3>
+                <p className="mt-2 text-base leading-relaxed text-cocoa/85">
+                  {c.body}
+                </p>
+              </div>
             </article>
           ))}
         </div>
