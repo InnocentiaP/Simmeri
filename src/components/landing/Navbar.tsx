@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { SimiSpot } from "./SimiSpot";
 
 const links = [
-  { href: "#features", label: "Features" },
   { href: "#how", label: "How It Works" },
   { href: "#deck", label: "Tonight's Deck" },
   { href: "#planning", label: "Meal Planning" },
+  { href: "#pricing", label: "Plans" },
   { href: "#faq", label: "FAQ" },
 ];
 
@@ -61,7 +61,7 @@ export function Navbar() {
               href="#early-access"
               className="inline-flex items-center rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5 hover:bg-olive"
             >
-              Start Cooking
+              Join Early Access
             </a>
             <button
               type="button"

@@ -11,6 +11,7 @@ import { UseCases } from "@/components/landing/UseCases";
 import { Benefits } from "@/components/landing/Benefits";
 import { Trust } from "@/components/landing/Trust";
 import { WhoFor } from "@/components/landing/WhoFor";
+import { Pricing } from "@/components/landing/Pricing";
 import { FAQ } from "@/components/landing/FAQ";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { Footer } from "@/components/landing/Footer";
@@ -51,6 +52,7 @@ function Index() {
         <Benefits />
         <Trust />
         <WhoFor />
+        <Pricing />
         <FAQ />
         <FinalCTA />
       </main>
