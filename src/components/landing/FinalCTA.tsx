@@ -1,4 +1,3 @@
-import simiFullbody from "@/assets/simi-fullbody.png.asset.json";
 import { EarlyAccessForm } from "./EarlyAccessForm";
 
 export function FinalCTA() {
@@ -19,7 +18,7 @@ export function FinalCTA() {
 
       <div className="relative mx-auto max-w-4xl px-4 text-center">
         <img
-          src={simiFullbody.url}
+          src="/images/simmeri/simi-fullbody.png"
           alt="Simi the kitchen duck, ready to cook"
           className="mx-auto h-56 w-auto drop-shadow-[0_16px_20px_rgba(62,42,33,0.25)] sm:h-72"
         />

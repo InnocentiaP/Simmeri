@@ -1,7 +1,3 @@
-import simiHead from "@/assets/simi-head.png.asset.json";
-
-// Legacy pose prop kept for API compatibility with existing call sites; a
-// single clean head sticker replaces the old character-sheet crops.
 export type SimiPose =
   | "happy"
   | "thinking"
@@ -33,7 +29,7 @@ interface Props {
 export function SimiSpot({ pose, size = 96, alt, className }: Props) {
   return (
     <img
-      src={simiHead.url}
+      src="/images/simmeri/simi-head.png"
       alt={alt ?? `Simi the kitchen duck${pose ? ` — ${pose}` : ""}`}
       width={size}
       height={size}

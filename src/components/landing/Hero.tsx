@@ -1,5 +1,4 @@
 import { motion, useReducedMotion } from "motion/react";
-import simiFullbody from "@/assets/simi-fullbody.png.asset.json";
 import pastaImg from "/images/simmeri/creamy-mushroom-pasta.jpg?url";
 import { SimiSpot } from "./SimiSpot";
 
@@ -162,11 +161,11 @@ export function Hero() {
 
           {/* Simi hero */}
           <motion.img
-            src={simiFullbody.url}
+            src="/images/simmeri/simi-fullbody.png"
             alt="Simi the kitchen duck holding a wooden spoon and a My Recipes notebook"
-            className="pointer-events-none absolute -bottom-20 -left-14 hidden h-56 w-auto drop-shadow-[0_16px_20px_rgba(62,42,33,0.25)] md:block"
-            initial={reduce ? undefined : { opacity: 0, y: 12 }}
-            animate={reduce ? undefined : { opacity: 1, y: [0, -6, 0] }}
+            className="pointer-events-none absolute -bottom-16 -left-38 hidden h-60 w-auto drop-shadow-[0_16px_20px_rgba(62,42,33,0.25)] md:block lg:-left-42"
+            initial={reduce ? undefined : { y: 0 }}
+            animate={reduce ? undefined : { y: [0, -8, 0] }}
             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
           />
         </div>

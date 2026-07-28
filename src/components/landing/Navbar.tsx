@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { SimiSpot } from "./SimiSpot";
 
 const links = [
   { href: "#how", label: "How It Works" },
@@ -33,7 +32,12 @@ export function Navbar() {
           }`}
         >
           <a href="#top" className="flex items-center gap-2.5">
-            <SimiSpot pose="happy" size={52} alt="Simi mark" className="-my-1.5" />
+            <img
+              src="/images/simmeri/simi-logo.png"
+              alt="Simi mark"
+              className="h-11 w-auto object-contain -my-1.5"
+              draggable={false}
+            />
             <span className="font-display text-2xl font-semibold tracking-tight text-olive-deep">
               Simmeri
             </span>
