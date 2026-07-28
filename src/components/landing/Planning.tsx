@@ -57,9 +57,27 @@ export function Planning() {
                       .map((m) => (
                         <div
                           key={m.title}
-                          className={`rounded-xl border border-border/50 ${m.tone} p-2 text-[11px] leading-tight text-coffee`}
+                          className="overflow-hidden rounded-xl border border-border/50 bg-background text-coffee"
                         >
-                          {m.title}
+                          <img
+                            src={m.img}
+                            alt={m.title}
+                            loading="lazy"
+                            width={200}
+                            height={140}
+                            className="h-10 w-full object-cover"
+                          />
+                          <div className="flex items-center justify-between gap-1 p-1.5">
+                            <span className="truncate text-[10px] font-medium leading-tight">
+                              {m.title}
+                            </span>
+                            <span
+                              className={`h-1.5 w-1.5 flex-none rounded-full ${
+                                m.ready ? "bg-olive-deep" : "bg-caramel"
+                              }`}
+                              aria-label={m.ready ? "Ready to cook" : "Needs 1 item"}
+                            />
+                          </div>
                         </div>
                       ))}
                   </div>
