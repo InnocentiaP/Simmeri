@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>RecipeVault Master PRD — Implementation Baseline v1.3</title>
+<style>
+:root {
+  --bg:#f4f6f8;
+  --paper:#ffffff;
+  --ink:#17212b;
+  --muted:#5d6875;
+  --line:#dfe5eb;
+  --accent:#2e6f5e;
+  --accent-soft:#e9f4f0;
+  --warn:#8a5a00;
+  --warn-soft:#fff5dc;
+  --code:#101820;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height:1.62;
+}
+.page{max-width:1180px;margin:0 auto;padding:36px 24px 80px}
+.hero{
+  background:linear-gradient(135deg,#173b33,#2e6f5e);
+  color:white;
+  padding:52px;
+  border-radius:22px;
+  box-shadow:0 18px 50px rgba(25,56,49,.18);
+}
+.hero .eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.78rem;opacity:.8}
+.hero h1{font-size:clamp(2.1rem,5vw,4.2rem);line-height:1.02;margin:.45rem 0 1rem}
+.hero p{max-width:780px;font-size:1.08rem;opacity:.9}
+.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.meta span{border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:7px 12px;font-size:.86rem}
+.layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:28px;margin-top:28px;align-items:start}
+nav{
+  position:sticky;top:18px;background:var(--paper);border:1px solid var(--line);
+  border-radius:18px;padding:18px;max-height:calc(100vh - 36px);overflow:auto;
+}
+nav h3{margin:0 0 10px;font-size:.95rem}
+nav a{display:block;color:var(--muted);text-decoration:none;padding:6px 8px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:var(--accent-soft);color:var(--accent)}
+main{min-width:0}
+section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:30px;margin-bottom:18px}
+h2{font-size:1.65rem;margin:0 0 18px;line-height:1.2}
+h2 span{color:var(--accent)}
+h3{margin-top:28px;margin-bottom:9px;font-size:1.08rem}
+p{margin:.75rem 0}
+ul,ol{padding-left:1.25rem}
+li{margin:.35rem 0}
+.flow{font-size:1.15rem;font-weight:700;color:var(--accent);letter-spacing:.01em}
+.callout,.warning{padding:16px 18px;border-radius:12px;margin:18px 0}
+.callout{background:var(--accent-soft);border-left:4px solid var(--accent)}
+.warning{background:var(--warn-soft);border-left:4px solid var(--warn);color:#5d430f}
+.grid.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.grid.two>div,.grid.three>div{border:1px solid var(--line);border-radius:14px;padding:18px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.94rem}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top;text-align:left}
+th{background:#f7f9fa}
+pre{white-space:pre-wrap;word-break:break-word}
+.code,.diagram,.schema pre{
+  background:var(--code);color:#eef5f3;border-radius:14px;padding:18px;overflow:auto;
+  font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:.88rem;line-height:1.55;
+}
+.diagram{border-left:4px solid #6fc2a9}
+.footer{color:var(--muted);text-align:center;padding:22px 0 0;font-size:.9rem}
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}
+  nav{position:relative;top:auto;max-height:none}
+  .grid.two,.grid.three{grid-template-columns:1fr}
+  .hero{padding:34px 26px}
+}
+@media print{
+  body{background:white}
+  .page{max-width:none;padding:0}
+  .hero{border-radius:0;box-shadow:none}
+  .layout{display:block}
+  nav{display:none}
+  section{break-inside:avoid;border:none;border-radius:0;padding:18px 0}
+}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+<div class="eyebrow">Product Requirements Document</div>
+<h1>RecipeVault</h1>
+<p>Master PRD — Implementation Baseline for VS Code, Codex, and Claude Code. Expanded with recipe media, Tonight’s Deck, daily/weekly meal planning, and a staged freemium model.</p>
+<div class="meta">
+<span>Version 1.3</span>
+<span>Status: Development Baseline</span>
+<span>Scope: Initial MVP + Decision, Planning, and Freemium Extensions</span>
+<span>Last consolidated: 27 July 2026</span>
+</div>
+</header>
+<div class="layout">
+<nav>
+<h3>Contents</h3>
+<a href="#s1"><span>1.</span> Document Purpose</a>
+<a href="#s2"><span>2.</span> Product Vision</a>
+<a href="#s3"><span>3.</span> Target Users and Core Problems</a>
+<a href="#s4"><span>4.</span> Exact MVP Scope</a>
+<a href="#s5"><span>5.</span> Information Architecture</a>
+<a href="#s6"><span>6.</span> Primary User Journey</a>
+<a href="#s7"><span>7.</span> Key Product Decisions</a>
+<a href="#s8"><span>8.</span> Functional Requirements by Epic</a>
+<a href="#s9"><span>9.</span> Ingredient and Recipe Model</a>
+<a href="#s10"><span>10.</span> Conceptual Database Schema</a>
+<a href="#s11"><span>11.</span> Inventory Confidence</a>
+<a href="#s12"><span>12.</span> Cooking Readiness Rules</a>
+<a href="#s13"><span>13.</span> API Baseline</a>
+<a href="#s14"><span>14.</span> Recipe Import Processing</a>
+<a href="#s15"><span>15.</span> Security and Integration Boundaries</a>
+<a href="#s16"><span>16.</span> Recommended Technical Stack</a>
+<a href="#s17"><span>17.</span> Repository and Architecture Baseline</a>
+<a href="#s18"><span>18.</span> Implementation Roadmap</a>
+<a href="#s19"><span>19.</span> How to Share This with Codex and Claude</a>
+<a href="#s20"><span>20.</span> Definition of Ready for Development</a>
+<a href="#s21"><span>21.</span> Recipe Media and Tonight’s Deck</a><a href="#s22"><span>22.</span> Meal Planning Extension</a><a href="#s23"><span>23.</span> Freemium and Monetization Extension</a></nav>
+<main>
+<section id="s1"><h2><span>1.</span> Document Purpose</h2>
+<p>This document is the implementation baseline for <strong>RecipeVault</strong>. It consolidates the agreed product direction, MVP scope, functional requirements, business rules, conceptual data model, API boundaries, and implementation priorities.</p>
+<div class="callout">
+<strong>Use this document as the shared product reference for Codex and Claude Code.</strong>
+  It should not be used as a single “build everything” prompt. Each sprint must still have its own scoped implementation brief.
+</div>
+</section>
+<section id="s2"><h2><span>2.</span> Product Vision</h2>
+<p><strong>RecipeVault is an AI-assisted personal cooking workspace</strong> that helps users capture recipes from anywhere, organize their recipe collection, attach useful visual references, remember previous cooking results, manage kitchen inventory, generate shopping lists, decide what to cook, and plan meals across a day or week.</p>
+<p class="flow">Capture → Review → Visualize → Decide → Plan → Shop → Cook → Remember → Learn</p>
+<h3>Product principles</h3>
+<ul>
+<li>Recommendation-driven rather than management-driven.</li>
+<li>AI assists, but users remain in control.</li>
+<li>Low-friction data maintenance.</li>
+<li>The Free tier must provide a meaningful end-to-end cooking loop; Premium monetizes scale, convenience, advanced decision support, and storage.</li>
+<li>Downgrades must never silently delete, corrupt, or transfer ownership of user-created data.</li>
+<li>Help users make cooking decisions instead of merely storing recipe links.</li>
+<li>Preserve source transparency and user trust.</li>
+<li>Personal cooking memories should make future re-cooking easier.</li>
+<li>Swipe is an optional decision aid, never the only way to browse or select recipes.</li>
+<li>Meal planning should reduce planning friction, not become a complex calendar-management system.</li>
+<li>Private saved recipes are the first source for recommendations and plans; public community discovery is a separate future product layer.</li>
+</ul></section>
+<section id="s3"><h2><span>3.</span> Target Users and Core Problems</h2>
+<h3>Primary users</h3>
+<ul>
+<li>People who save recipes from websites, blogs, videos, or notes but rarely revisit them.</li>
+<li>Home cooks who often ask, “What can I cook with what I already have?”</li>
+<li>Users who want a lightweight kitchen inventory without maintaining exact quantities.</li>
+<li>Users who want recipe-driven shopping rather than starting from a blank checklist.</li>
+<li>Users who want to remember how a dish looked when they cooked it previously.</li>
+<li>Users who want to plan meals for a day or week without maintaining a complex calendar.</li>
+</ul>
+<h3>Problems addressed</h3>
+<ul>
+<li>Recipes are scattered across many platforms.</li>
+<li>Imported recipes are incomplete or inconsistent.</li>
+<li>Users forget what ingredients they already have.</li>
+<li>Shopping lists lose context and create duplicates.</li>
+<li>Users struggle to decide what to cook.</li>
+<li>Large personal recipe collections create decision fatigue.</li>
+<li>Users repeatedly decide meals at the last minute without a practical weekly overview.</li>
+<li>Planning several recipes can create duplicate or disconnected shopping needs.</li>
+<li>Source photos may not reflect the user’s own cooking result.</li>
+<li>Users lack a visual history that helps them confidently re-cook a recipe.</li>
+</ul></section>
+<section id="s4"><h2><span>4.</span> Exact MVP Scope</h2>
+<div class="grid three">
+<div>
+<h3>Must Have</h3>
+<ul>
+<li>Authentication</li>
+<li>Ingredient Catalog</li>
+<li>Manual Recipe Creation</li>
+<li>URL and Pasted Text Recipe Import</li>
+<li>Recipe Inbox and Review</li>
+<li>My Recipes</li>
+<li>Recipe cover and reference image management</li>
+<li>User-uploaded cooking-result photos</li>
+<li>Kitchen Inventory</li>
+<li>Cooking Readiness</li>
+<li>Shopping List</li>
+<li>Mark Recipe as Cooked</li>
+<li>Basic dashboard suggestions</li>
+</ul>
+</div>
+<div>
+<h3>MVP Extension / Early Post-MVP</h3>
+<ul>
+<li>Tonight’s Deck using the user’s own saved recipes</li>
+<li>Session-only Not Tonight behavior</li>
+<li>Shortlist, View Recipe, Cook This, and Undo</li>
+<li>Daily and weekly Meal Plan views</li>
+<li>Add a saved recipe to a date and meal slot</li>
+<li>Servings and optional planning notes</li>
+<li>Generate a shopping preview from planned meals</li>
+<li>Duplicate or move planned meals</li>
+<li>Accessible non-drag and non-swipe alternatives</li>
+<li>Freemium account entitlements and contextual upgrade experience after core-product validation</li>
+<li>Configurable Free and Premium usage limits</li>
+</ul>
+</div>
+<div>
+<h3>Not in Initial MVP</h3>
+<ul>
+<li>Advanced preference-learning recommendation scoring</li>
+<li>Automatic AI-generated full weekly meal plans</li>
+<li>Nutrition and macro planning</li>
+<li>Calorie targets</li>
+<li>Advanced batch-prep task scheduling</li>
+<li>Automatic leftover quantity tracking</li>
+<li>Precise inventory quantities</li>
+<li>Image OCR</li>
+<li>Voice interaction</li>
+<li>Household collaborative planning</li>
+<li>Public community publishing and creator profiles</li>
+<li>Community recipe discovery feed</li>
+<li>Marketplace, comments, followers, or social ranking</li>
+<li>Full Instagram, TikTok, or Facebook extraction</li>
+<li>Paid subscription checkout before commercial, tax, legal, refund, and privacy decisions are approved</li>
+<li>Usage-based billing, advertising, or sale of personal cooking data</li>
+</ul>
+</div>
+</div></section>
+<section id="s5"><h2><span>5.</span> Information Architecture</h2>
+<table>
+<thead><tr><th>Navigation</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>Home</td><td>Cooking dashboard with Ready to Cook, Almost Ready, Kitchen reminders, recent imports, favorites, Tonight’s Deck, and upcoming planned meals.</td></tr>
+<tr><td>Tonight’s Deck</td><td>Optional decision mode presenting a limited set of recommended recipes from the user’s saved collection.</td></tr>
+<tr><td>Meal Plan</td><td>Daily and weekly view for scheduling recipes, servings, meal slots, and shopping needs.</td></tr>
+<tr><td>Recipe Inbox</td><td>Review imported recipes before they enter My Recipes, including source-image candidates.</td></tr>
+<tr><td>My Recipes</td><td>Search, filter, view, edit, favorite, archive, cook, and manage recipe media.</td></tr>
+<tr><td>Recipe Detail</td><td>View ingredients, steps, readiness, source reference, recipe media, cooking history, and personal cooking-result photos.</td></tr>
+<tr><td>Kitchen</td><td>Track ingredient availability using simple status-based inventory.</td></tr>
+<tr><td>Shopping</td><td>Manage missing ingredients from recipes and planned meals.</td></tr>
+<tr><td>Collections</td><td>Organize recipes into user-defined groups.</td></tr>
+<tr><td>Settings</td><td>Manage preferences, language, measurement system, meal-slot defaults, timezone, inventory staleness rules, and media preferences.</td></tr>
+</tbody>
+</table></section>
+<section id="s6"><h2><span>6.</span> Primary User Journey</h2>
+<pre class="diagram">Discover, Paste, or Manually Enter Recipe
+        ↓
+Create Recipe Import or Draft
+        ↓
+Review Text, Source, and Optional Image
+        ↓
+Approve to My Recipes
+        ↓
+Calculate Cooking Readiness
+        ↓
+Choose Directly / Tonight’s Deck / Meal Plan
+        ↓
+Schedule Recipe for a Date and Meal Slot
+        ↓
+Review Combined Missing Ingredients
+        ↓
+Add Needed Items to Shopping List
+        ↓
+Shop and Confirm Kitchen Updates
+        ↓
+Cook Planned Recipe
+        ↓
+Mark as Cooked
+        ↓
+Upload Optional Cooking Photo and Notes
+        ↓
+Confirm Kitchen Updates
+        ↓
+Cooking History and Re-cook Reference</pre></section>
+<section id="s7"><h2><span>7.</span> Key Product Decisions</h2>
+<ol>
+<li><strong>Recipe Inbox is mandatory.</strong> Imported recipes do not enter My Recipes until reviewed and approved.</li>
+<li><strong>Kitchen uses status, not exact quantity.</strong> Available, Running Low, Out of Stock, and Unknown are the MVP states.</li>
+<li><strong>Ingredient is shared master data.</strong> Recipe, Kitchen, Shopping, and Meal Planning refer to the same canonical Ingredient entity.</li>
+<li><strong>Ingredient importance belongs to Recipe Ingredient.</strong> The same ingredient may be Core in one recipe and Optional in another.</li>
+<li><strong>Readiness is derived.</strong> It is calculated from recipe ingredients, importance, Kitchen state, and confidence.</li>
+<li><strong>AI output always requires review.</strong> AI must not silently create an approved recipe or meal plan.</li>
+<li><strong>Raw source text is preserved.</strong> Normalization never destroys the original ingredient text.</li>
+<li><strong>Inventory never changes silently after cooking.</strong> The application suggests updates and requires confirmation.</li>
+<li><strong>Shopping items merge only by canonical Ingredient ID.</strong> String similarity alone must not merge items.</li>
+<li><strong>Recommendation is explainable.</strong> The UI must show a simple reason for each suggestion.</li>
+<li><strong>Recipe visuals are user-controlled.</strong> Users may upload, reference, replace, reorder, or remove media they own.</li>
+<li><strong>Cooking-result photos belong to cooking history.</strong> They may optionally be reused as recipe cover or reference media.</li>
+<li><strong>Media provenance is preserved.</strong> The application distinguishes upload, source reference, remote reference, and cooking result.</li>
+<li><strong>Tonight’s Deck starts with private saved recipes.</strong> It does not depend on public community content.</li>
+<li><strong>Not Tonight is session-specific.</strong> Skipping a card must not be treated as a permanent dislike.</li>
+<li><strong>Swipe is optional.</strong> Every gesture must have visible button and keyboard alternatives.</li>
+<li><strong>Meal planning is user-directed.</strong> The system may suggest recipes, but must not silently populate or change a user’s plan.</li>
+<li><strong>A plan entry is not a Cooking Event.</strong> Cooking History is created only after the user explicitly marks the meal as cooked.</li>
+<li><strong>A plan does not reserve or consume inventory.</strong> Readiness remains a current snapshot and Kitchen changes require confirmation.</li>
+<li><strong>Meal Plan shopping is additive and reviewable.</strong> Users preview combined missing ingredients before adding them to Shopping.</li>
+<li><strong>Meal planning is timezone-aware.</strong> Planned dates use the user’s configured timezone.</li>
+<li><strong>The Free tier must demonstrate the complete core value.</strong> A user must be able to save recipes manually, use basic Kitchen readiness, create a Shopping List, and record Cooking History without payment.</li>
+<li><strong>Premium monetizes expansion and convenience.</strong> Higher limits, recipe imports, expanded media, Tonight’s Deck access, Meal Planning, and advanced suggestions may be Premium entitlements.</li>
+<li><strong>Entitlements are server-authoritative and configurable.</strong> Limits, plan codes, and provider price identifiers must not be scattered or hard-coded across UI components.</li>
+<li><strong>Downgrade is non-destructive.</strong> Existing user data remains owned and accessible; records above a Free limit may become read-only or require cleanup before new creation, but must not be deleted silently.</li>
+<li><strong>Pricing is a separate commercial decision.</strong> Claude and Codex must not invent prices, trials, discounts, or payment behavior without an approved monetization brief.</li>
+<li><strong>Billing requires a separate approved sprint.</strong> Documenting the freemium model does not authorize checkout, webhooks, payment-provider integration, or paywall implementation.</li>
+<li><strong>Community discovery and collaborative household planning are separate future layers.</strong></li>
+</ol></section>
+<section id="s8"><h2><span>8.</span> Functional Requirements by Epic</h2>
+<h3>8.1 Authentication</h3>
+<ul>
+<li>Register, login, logout, session handling, and current-user retrieval.</li>
+<li>Google OAuth may be added if selected during technical design.</li>
+<li>All personal resources require authenticated ownership checks.</li>
+</ul>
+<h3>8.2 Recipe Capture and Inbox</h3>
+<ul>
+<li>Support website URL, pasted text, and manual recipe entry.</li>
+<li>Create import states: Pending, Processing, Needs Review, Approved, Failed, Cancelled.</li>
+<li>Allow retry, cancellation, partial extraction, manual fallback, and duplicate-source warning.</li>
+<li>Display confidence warnings without exposing meaningless precision.</li>
+<li>Show optional source-image candidates.</li>
+<li>Allow a local upload or external image reference during review.</li>
+</ul>
+<h3>8.3 My Recipes</h3>
+<ul>
+<li>Recipe cards, search, filters, sorting, favorites, archive, and detail.</li>
+<li>Detail includes ingredients, steps, personal notes, source preview, readiness, media gallery, cooking history, and upcoming planned meals.</li>
+<li>Users may manage recipe reference images and choose one primary image.</li>
+<li>Primary actions include Add Missing Ingredients, Add to Meal Plan, and Cook This.</li>
+</ul>
+<h3>8.4 Kitchen</h3>
+<ul>
+<li>Setup wizard with common ingredients.</li>
+<li>Add, update, confirm, remove, search, and filter ingredients.</li>
+<li>Status: Available, Running Low, Out of Stock, Unknown.</li>
+<li>Storage: Pantry, Refrigerator, Freezer, Spice Rack, Other.</li>
+<li>Track last confirmed time and derived confidence.</li>
+</ul>
+<h3>8.5 Cooking Readiness</h3>
+<ul>
+<li>Compare Recipe Ingredients with Kitchen Inventory.</li>
+<li>Weight Core ingredients more strongly than Supporting or Seasoning ingredients.</li>
+<li>Ignore Optional ingredients as readiness blockers.</li>
+<li>Labels: Ready to Cook, Check First, Almost Ready, Needs Shopping, Not Ready.</li>
+<li>Meal Plan entries show the latest readiness snapshot without reserving inventory.</li>
+</ul>
+<h3>8.6 Shopping</h3>
+<ul>
+<li>Add missing ingredients from one or more recipes or planned meals.</li>
+<li>Merge duplicate canonical ingredients.</li>
+<li>Show “Needed for” recipe, date, and planned-meal context.</li>
+<li>Group by category.</li>
+<li>Mark purchased and optionally update Kitchen after confirmation.</li>
+</ul>
+<h3>8.7 Cooking History</h3>
+<ul>
+<li>Mark a recipe or planned meal as cooked.</li>
+<li>Store cooked date, servings, optional notes, and optional outcome note.</li>
+<li>Allow cooking-result photos.</li>
+<li>Show prior cooking-result photos when re-cooking.</li>
+<li>Offer explicit inventory updates after cooking.</li>
+<li>Link a Cooking Event back to its originating Meal Plan Entry when applicable.</li>
+</ul>
+<h3>8.8 Smart Suggestions</h3>
+<ul>
+<li>Ready to Cook</li>
+<li>Almost Ready</li>
+<li>Use Soon / Needs Checking</li>
+<li>Recently Imported</li>
+<li>Never Cooked</li>
+<li>Favorites</li>
+<li>Unplanned days or meal slots</li>
+<li>Explain why each suggestion appears.</li>
+</ul>
+<h3>8.9 Recipe Media and Cooking Photos</h3>
+<ul>
+<li>Support JPEG, PNG, and WebP for the initial implementation.</li>
+<li>Support external image references subject to security and rights constraints.</li>
+<li>Preserve media provenance.</li>
+<li>Allow users to edit alt text, select a primary image, and remove owned media.</li>
+<li>Resize, compress, and strip unnecessary EXIF metadata.</li>
+<li>User cooking photos are private by default.</li>
+<li>Image OCR remains outside the initial MVP.</li>
+</ul>
+<h3>8.10 Tonight’s Deck</h3>
+<ul>
+<li>Generate a limited deck from approved recipes owned by the user.</li>
+<li>Prioritize readiness, missing ingredients, cooking time, favorites, never-cooked recipes, recency, and ingredients needing attention.</li>
+<li>Show recipe image, title, cooking time, readiness, missing summary, and recommendation reason.</li>
+<li>Actions: Not Tonight, Shortlist, View Recipe, Cook This, Add to Meal Plan, and Undo.</li>
+<li>Not Tonight applies only to the active session.</li>
+<li>Limit a session to five to eight cards initially.</li>
+<li>End with a shortlist comparison.</li>
+<li>Provide buttons and keyboard controls.</li>
+</ul>
+<h3>8.11 Meal Planning</h3>
+<ul>
+<li>Provide daily and weekly views.</li>
+<li>Allow users to add an approved recipe to a date and meal slot.</li>
+<li>Default meal slots: Breakfast, Lunch, Dinner, and Snack; users may hide unused slots later.</li>
+<li>Allow servings and optional notes per planned meal.</li>
+<li>Allow move, duplicate, replace, skip, and delete actions.</li>
+<li>Allow a recipe to be planned more than once.</li>
+<li>Show current readiness and missing-item summary for each planned meal.</li>
+<li>Allow users to add recipes from My Recipes, Recipe Detail, Tonight’s Deck, or dashboard suggestions.</li>
+<li>Generate a reviewable shopping preview for a selected day, date range, or week.</li>
+<li>Preserve recipe and planned-date context when items enter Shopping.</li>
+<li>Allow marking a planned meal as Cooked, Skipped, or Moved.</li>
+<li>Do not automatically consume Kitchen inventory when a meal is planned or marked cooked.</li>
+<li>Support buttons and accessible move controls instead of requiring drag-and-drop.</li>
+<li>On mobile, use a chronological list or day tabs instead of forcing a dense desktop calendar grid.</li>
+</ul>
+<h3>8.12 Freemium, Subscription, and Entitlements</h3>
+<ul>
+<li>Support at least two product plans: Free and Premium.</li>
+<li>Free users must be able to complete a meaningful core loop: create and use recipes, manage basic Kitchen status, evaluate readiness, use Shopping, and record Cooking History.</li>
+<li>Premium may provide higher configurable limits, expanded imports and media, fuller Tonight’s Deck access, Meal Planning, and enhanced suggestions.</li>
+<li>Expose a server-authoritative entitlement summary for the authenticated user.</li>
+<li>Track plan-relevant usage such as active recipes, monthly imports, media storage, deck sessions, and planning capacity only where an approved limit requires it.</li>
+<li>Show contextual usage and upgrade messaging before a limit is reached and a clear explanation when an action is blocked.</li>
+<li>Do not hide or delete existing user-owned records after downgrade; apply an approved read-only or cleanup-required state when data exceeds Free limits.</li>
+<li>Allow users to view plan status, renewal or cancellation state, included features, usage, and applicable limits.</li>
+<li>Keep pricing, plan codes, feature flags, provider product IDs, and limits in centralized server configuration.</li>
+<li>Billing integration, checkout, customer portal, webhook processing, refunds, taxes, and invoices require a separately approved monetization sprint.</li>
+<li>Account deletion and data export must remain available regardless of plan.</li>
+</ul></section>
+<section id="s9"><h2><span>9.</span> Ingredient, Recipe, Media, Meal Planning, and Subscription Model</h2>
+<h3>Master Ingredient</h3>
+<p>Global or centrally managed canonical ingredient metadata.</p>
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>id</td><td>Primary identifier</td></tr>
+<tr><td>canonicalName</td><td>Standard display name</td></tr>
+<tr><td>slug</td><td>Unique normalized key</td></tr>
+<tr><td>categoryId</td><td>Shopping and search category</td></tr>
+<tr><td>defaultStorageLocation</td><td>Suggested Kitchen location</td></tr>
+<tr><td>isStaple</td><td>Used in setup wizard</td></tr>
+<tr><td>isActive</td><td>Historical safety without deletion</td></tr>
+</tbody>
+</table>
+<h3>Recipe Ingredient</h3>
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>recipeId</td><td>Owning recipe</td></tr>
+<tr><td>ingredientId</td><td>Canonical Ingredient; nullable when unresolved</td></tr>
+<tr><td>rawText</td><td>Original source text</td></tr>
+<tr><td>displayName</td><td>User-facing editable name</td></tr>
+<tr><td>quantityValue / quantityText</td><td>Structured and original quantity representation</td></tr>
+<tr><td>unit</td><td>Normalized unit when available</td></tr>
+<tr><td>preparationNote</td><td>Chopped, grated, divided, etc.</td></tr>
+<tr><td>importance</td><td>Core, Supporting, Seasoning, Optional</td></tr>
+<tr><td>normalizationStatus</td><td>Matched, Needs Review, Unmatched, User Confirmed</td></tr>
+</tbody>
+</table>
+<h3>Media Asset</h3>
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>id</td><td>Primary identifier</td></tr>
+<tr><td>ownerUserId</td><td>Authenticated owner</td></tr>
+<tr><td>sourceType</td><td>User Upload, Source Reference, Remote Reference, Cooking Result</td></tr>
+<tr><td>storageKey / externalUrl</td><td>Stored object identifier or remote reference</td></tr>
+<tr><td>sourcePageUrl</td><td>Optional provenance link</td></tr>
+<tr><td>mimeType</td><td>Validated media type</td></tr>
+<tr><td>width / height / byteSize</td><td>Operational metadata</td></tr>
+<tr><td>altText</td><td>User-editable accessibility description</td></tr>
+<tr><td>createdAt / updatedAt / deletedAt</td><td>Lifecycle and soft deletion</td></tr>
+</tbody>
+</table>
+<h3>Meal Plan</h3>
+<p>A user-owned planning container for a date range, normally one week.</p>
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>id</td><td>Primary identifier</td></tr>
+<tr><td>userId</td><td>Authenticated owner</td></tr>
+<tr><td>startDate / endDate</td><td>Inclusive local-date range</td></tr>
+<tr><td>timezone</td><td>Timezone used to interpret dates</td></tr>
+<tr><td>status</td><td>Draft, Active, Archived</td></tr>
+<tr><td>createdAt / updatedAt</td><td>Lifecycle timestamps</td></tr>
+</tbody>
+</table>
+<h3>Meal Plan Entry</h3>
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>id</td><td>Primary identifier</td></tr>
+<tr><td>mealPlanId</td><td>Owning Meal Plan</td></tr>
+<tr><td>recipeId</td><td>Planned approved Recipe</td></tr>
+<tr><td>plannedDate</td><td>User-local calendar date</td></tr>
+<tr><td>mealType</td><td>Breakfast, Lunch, Dinner, Snack, or Other</td></tr>
+<tr><td>servings</td><td>Planned servings</td></tr>
+<tr><td>notes</td><td>Optional planning note</td></tr>
+<tr><td>position</td><td>Ordering within a date and meal slot</td></tr>
+<tr><td>status</td><td>Planned, Cooked, Skipped, Moved, Cancelled</td></tr>
+<tr><td>sourceType</td><td>Manual, Tonight’s Deck, Suggestion, or Duplicated</td></tr>
+<tr><td>createdAt / updatedAt</td><td>Lifecycle timestamps</td></tr>
+</tbody>
+</table>
+<h3>Subscription</h3>
+<p>A provider-independent representation of the user’s commercial plan. It is introduced only when the approved monetization sprint begins.</p>
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>id</td><td>Primary identifier</td></tr>
+<tr><td>userId</td><td>Authenticated owner; unique for one current subscription record per user</td></tr>
+<tr><td>planCode</td><td>Free, Premium, or another explicitly approved future plan</td></tr>
+<tr><td>status</td><td>Free, Trialing, Active, Past Due, Cancelled, or Expired</td></tr>
+<tr><td>provider</td><td>Approved billing provider or None for Free</td></tr>
+<tr><td>providerCustomerId / providerSubscriptionId</td><td>Server-only provider references</td></tr>
+<tr><td>currentPeriodStart / currentPeriodEnd</td><td>Subscription period when applicable</td></tr>
+<tr><td>cancelAtPeriodEnd</td><td>Scheduled cancellation behavior</td></tr>
+<tr><td>createdAt / updatedAt</td><td>Lifecycle timestamps</td></tr>
+</tbody>
+</table>
+<h3>Usage Counter</h3>
+<p>Optional usage records created only for approved plan limits. Avoid collecting activity that is not needed for product operation or entitlement enforcement.</p>
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>id</td><td>Primary identifier</td></tr>
+<tr><td>userId</td><td>Authenticated owner</td></tr>
+<tr><td>metric</td><td>Approved metric such as Monthly Import, Media Bytes, or Deck Session</td></tr>
+<tr><td>periodStart / periodEnd</td><td>Usage window</td></tr>
+<tr><td>value</td><td>Current measured usage</td></tr>
+<tr><td>updatedAt</td><td>Last recalculation or increment</td></tr>
+</tbody>
+</table></section>
+<section id="s10"><h2><span>10.</span> Conceptual Database Schema</h2>
+<div class="schema">
+<pre>User
+├── UserPreference
+├── Subscription
+├── UsageCounter
+├── RecipeImport
+├── Recipe
+│   ├── RecipeSource
+│   ├── RecipeIngredient ─── Ingredient
+│   ├── RecipeStep
+│   ├── RecipeMedia ──────── MediaAsset
+│   ├── CollectionRecipe ─── Collection
+│   ├── MealPlanEntry
+│   └── CookingEvent
+│       └── CookingEventMedia ─── MediaAsset
+├── MealPlan
+│   └── MealPlanEntry ────── Recipe
+├── InventoryItem ────────── Ingredient
+│   └── InventoryActivity
+└── ShoppingList
+    └── ShoppingItem ─────── Ingredient
+        └── ShoppingItemSource
+            ├── Recipe
+            └── MealPlanEntry
+
+Ingredient
+├── IngredientCategory
+└── IngredientAlias</pre>
+</div>
+<h3>Initial MVP and extension entities</h3>
+<p>User, UserPreference, IngredientCategory, Ingredient, IngredientAlias, RecipeImport, Recipe, RecipeSource, RecipeIngredient, RecipeStep, MediaAsset, RecipeMedia, InventoryItem, InventoryActivity, ShoppingList, ShoppingItem, ShoppingItemSource, CookingEvent, CookingEventMedia, Collection, CollectionRecipe, MealPlan, MealPlanEntry, Subscription, and UsageCounter.</p>
+<h3>Important constraints</h3>
+<ul>
+<li>User email must be unique and case-insensitive.</li>
+<li>Ingredient slug must be unique.</li>
+<li>One Inventory Item per user and Ingredient.</li>
+<li>One active Shopping List per user in the MVP.</li>
+<li>Collection name must be unique per user.</li>
+<li>Collection and Recipe ownership must match.</li>
+<li>Media Asset ownership must match Recipe and Cooking Event ownership.</li>
+<li>A Recipe may have at most one primary Recipe Media record at a time.</li>
+<li>Meal Plan, Meal Plan Entry, and Recipe ownership must match.</li>
+<li>A Meal Plan date range must contain its Meal Plan Entry dates.</li>
+<li>Meal Plan Entry status transitions must be validated.</li>
+<li>A Cooking Event linked to a Meal Plan Entry must belong to the same user and Recipe.</li>
+<li>Shopping Item Source, Recipe, Meal Plan Entry, and Shopping List must belong to the same user.</li>
+<li>Deleting a Meal Plan Entry must not delete Recipe or Cooking History.</li>
+<li>One current Subscription entitlement state per user.</li>
+<li>Provider customer and subscription identifiers must be unique when present and never exposed to other users.</li>
+<li>Usage Counter uniqueness must be enforced by user, metric, and usage period.</li>
+<li>Subscription downgrade must never cascade-delete Recipe, Media, Kitchen, Shopping, Meal Plan, or Cooking History data.</li>
+<li>All deletions affecting history should use soft delete or restrictive behavior.</li>
+</ul></section>
+<section id="s11"><h2><span>11.</span> Inventory Confidence</h2>
+<p>The stored inventory status should not automatically be overwritten merely because time has passed.</p>
+<table>
+<thead><tr><th>Stored Status</th><th>Derived Confidence</th><th>UI Meaning</th></tr></thead>
+<tbody>
+<tr><td>Available</td><td>Current</td><td>Trusted as available</td></tr>
+<tr><td>Available</td><td>Aging</td><td>Still usable, but confirmation may soon be useful</td></tr>
+<tr><td>Available</td><td>Stale</td><td>Needs checking</td></tr>
+</tbody>
+</table>
+<p>This avoids turning durable ingredients such as rice, salt, or oil into Unknown too aggressively.</p>
+</section>
+<section id="s12"><h2><span>12.</span> Cooking Readiness Rules</h2>
+<table>
+<thead><tr><th>Importance</th><th>Suggested Weight</th></tr></thead>
+<tbody>
+<tr><td>Core</td><td>5</td></tr>
+<tr><td>Supporting</td><td>3</td></tr>
+<tr><td>Seasoning</td><td>1</td></tr>
+<tr><td>Optional</td><td>0</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>Kitchen State</th><th>Interpretation</th></tr></thead>
+<tbody>
+<tr><td>Available</td><td>Available</td></tr>
+<tr><td>Running Low</td><td>Available with warning</td></tr>
+<tr><td>Unknown or Stale</td><td>Needs checking</td></tr>
+<tr><td>Out of Stock</td><td>Missing</td></tr>
+<tr><td>No Inventory Item</td><td>Not in Kitchen / Missing</td></tr>
+</tbody>
+</table>
+<div class="callout">
+  Losing one Core ingredient may matter more than losing several garnishes. Do not use only a raw “number of missing ingredients” rule.
+</div>
+</section>
+<section id="s13"><h2><span>13.</span> API Baseline</h2>
+<h3>Core endpoint groups</h3>
+<pre class="code">/api/auth/*
+/api/me
+/api/me/preferences
+/api/ingredients
+/api/recipe-imports
+/api/recipes
+/api/recipes/{id}/ingredients
+/api/recipes/{id}/steps
+/api/recipes/{id}/readiness
+/api/recipes/{id}/media
+/api/media-assets
+/api/inventory
+/api/shopping-lists
+/api/cooking-events
+/api/cooking-events/{id}/media
+/api/collections
+/api/suggestions/dashboard
+/api/suggestions/tonights-deck
+/api/meal-plans
+/api/meal-plans/{id}
+/api/meal-plans/{id}/entries
+/api/meal-plans/{id}/shopping-preview
+/api/me/entitlements
+/api/billing/checkout
+/api/billing/portal
+/api/billing/webhooks</pre>
+<h3>Standard success response</h3>
+<pre class="code">{
+  "data": {},
+  "meta": {},
+  "error": null
+}</pre>
+<h3>Standard error response</h3>
+<pre class="code">{
+  "data": null,
+  "meta": { "correlationId": "..." },
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Safe user-facing message",
+    "details": {}
+  }
+}</pre>
+<h3>Critical API behavior</h3>
+<ul>
+<li>Authenticated user ID must come from the session.</li>
+<li>Recipe approval must be atomic.</li>
+<li>Import processing must not block a long-running request.</li>
+<li>Inventory changes must create activity history.</li>
+<li>Shopping purchase may update Kitchen only with confirmation.</li>
+<li>Media endpoints must validate ownership and use secure uploads.</li>
+<li>Tonight’s Deck actions remain session-scoped unless future persistence is approved.</li>
+<li>Meal Plan endpoints must validate user timezone, ownership, date range, meal type, and Recipe ownership.</li>
+<li>Shopping preview must not create Shopping Items until the user confirms.</li>
+<li>Moving or duplicating a planned meal must be transactional.</li>
+<li>Marking a Meal Plan Entry as Cooked must not silently create Kitchen deductions.</li>
+<li>Entitlement decisions must be enforced on the server; client-side plan flags are display hints only.</li>
+<li>Checkout and customer-portal sessions may be created only for the authenticated user through server-controlled provider configuration.</li>
+<li>Billing webhook events must be authenticated, idempotent, replay-safe, and stored or logged with correlation identifiers.</li>
+<li>Payment-provider failure must not block access to existing Free functionality or user-owned data.</li>
+<li>Price identifiers, plan mappings, trial rules, and usage limits must not be accepted from untrusted request bodies.</li>
+</ul></section>
+<section id="s14"><h2><span>14.</span> Recipe Import Processing</h2>
+<pre class="diagram">URL or Text
+   ↓
+Validate and Normalize
+   ↓
+Check Duplicate Source
+   ↓
+Create RecipeImport
+   ↓
+Structured Metadata Parser
+   ↓
+Deterministic Text Parser
+   ↓
+AI Fallback
+   ↓
+Ingredient Normalization
+   ↓
+Needs Review
+   ↓
+User Approval
+   ↓
+Create Active Recipe Transactionally</pre>
+<h3>Import rules</h3>
+<ul>
+<li>Partial useful results become Needs Review, not Failed.</li>
+<li>Failed imports retain the original input and support retry.</li>
+<li>Do not invent recipe steps or quantities.</li>
+<li>Do not approve recipes automatically.</li>
+<li>YouTube support is conditional on accessible transcript or reliable text.</li>
+<li>Instagram, TikTok, and Facebook automatic extraction are outside the initial MVP.</li>
+</ul>
+</section>
+<section id="s15"><h2><span>15.</span> Security and Integration Boundaries</h2>
+<ul>
+<li>Validate and sanitize all server input.</li>
+<li>Protect all personal resources with ownership checks.</li>
+<li>Rate-limit authentication and recipe import endpoints.</li>
+<li>Do not expose stack traces, database queries, prompts, tokens, or provider credentials.</li>
+<li>External URL fetching must prevent SSRF.</li>
+<li>Reject localhost, private IP ranges, metadata-service addresses, file URLs, unsupported protocols, embedded credentials, oversized responses, and redirect loops.</li>
+<li>AI providers should sit behind service abstractions.</li>
+<li>AI providers receive only the minimum data necessary.</li>
+<li>Validate uploaded media by decoded content, MIME type, extension, dimensions, and byte size.</li>
+<li>Strip unnecessary EXIF metadata, especially location data.</li>
+<li>Use private object storage or access-controlled delivery for personal cooking photos.</li>
+<li>Remote image references require URL-safety controls.</li>
+<li>Meal plans, planned dates, notes, and cooking routines are private personal data.</li>
+<li>Do not use meal-planning behavior for personalized advertising or external profiling.</li>
+<li>Future AI-generated plans require explicit user request, transparent rationale, and preference controls.</li>
+<li>Do not collect or store raw card details; payment instruments remain with the approved payment provider.</li>
+<li>Verify billing webhook signatures and protect checkout and portal endpoints against ownership confusion, replay, and open redirects.</li>
+<li>Subscription status, payment state, invoices, and billing identifiers are private account data.</li>
+<li>Freemium limits must not be used to prevent account deletion, legally required access, or user-data export.</li>
+<li>Public sharing requires separate rights, moderation, privacy, and takedown policies.</li>
+</ul></section>
+<section id="s16"><h2><span>16.</span> Recommended Technical Stack</h2>
+<table>
+<thead><tr><th>Layer</th><th>Recommended Baseline</th></tr></thead>
+<tbody>
+<tr><td>Application</td><td>Next.js with TypeScript</td></tr>
+<tr><td>UI</td><td>Tailwind CSS and shadcn/ui</td></tr>
+<tr><td>Database</td><td>PostgreSQL</td></tr>
+<tr><td>ORM</td><td>Prisma</td></tr>
+<tr><td>Validation</td><td>Zod</td></tr>
+<tr><td>Authentication</td><td>Auth.js or Clerk; freeze one choice before Sprint 1</td></tr>
+<tr><td>Dates and timezone</td><td>Store instants in UTC and meal-plan dates as validated local dates with an explicit IANA timezone</td></tr>
+<tr><td>Media storage</td><td>S3-compatible object storage, Cloudinary, or equivalent</td></tr>
+<tr><td>Image processing</td><td>Safe resize/compression pipeline with metadata stripping</td></tr>
+<tr><td>Background jobs</td><td>Begin with a simple durable design; add Inngest or Trigger.dev if needed</td></tr>
+<tr><td>Deployment</td><td>Vercel plus Neon or Supabase PostgreSQL</td></tr>
+<tr><td>AI</td><td>Provider abstraction; do not bind application logic directly to one vendor</td></tr>
+<tr><td>Billing</td><td>Approved payment provider or merchant-of-record solution; freeze provider, tax handling, currencies, refunds, and webhook model before monetization implementation</td></tr>
+</tbody>
+</table>
+<div class="warning">
+  The stack must be frozen before implementation. Codex and Claude must not independently replace framework, ORM, authentication, date handling, media storage, or job infrastructure.
+</div></section>
+<section id="s17"><h2><span>17.</span> Repository and Architecture Baseline</h2>
+<pre class="code">recipe-vault/
+├── app/
+│   ├── (auth)/
+│   ├── (dashboard)/
+│   ├── api/
+│   └── layout.tsx
+├── components/
+│   ├── ui/
+│   ├── recipes/
+│   ├── media/
+│   ├── recommendations/
+│   ├── meal-plans/
+│   ├── billing/
+│   ├── inventory/
+│   └── shopping/
+├── lib/
+│   ├── application/
+│   ├── domain/
+│   ├── infrastructure/
+│   ├── auth/
+│   ├── db/
+│   ├── media/
+│   ├── dates/
+│   ├── billing/
+│   └── validation/
+├── prisma/
+├── docs/
+│   ├── product/
+│   ├── architecture/
+│   └── sprints/
+├── tests/
+├── scripts/
+├── AGENTS.md
+└── CLAUDE.md</pre>
+<p>Business rules should not be scattered across UI components or API route handlers. Route handlers validate and authorize, application services orchestrate, domain modules contain rules, and infrastructure modules handle database, media storage, dates, or provider access.</p></section>
+<section id="s18"><h2><span>18.</span> Implementation Roadmap</h2>
+<table>
+<thead><tr><th>Sprint</th><th>Scope</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>Repository, tooling, CI, environment validation, database connectivity</td></tr>
+<tr><td>1</td><td>Authentication and User Preferences</td></tr>
+<tr><td>2</td><td>Ingredient Catalog and Kitchen Setup staples</td></tr>
+<tr><td>3</td><td>Manual Recipe Creation, Recipe Review model, and basic image selection</td></tr>
+<tr><td>4</td><td>My Recipes list, detail, cover image, and reference-media management</td></tr>
+<tr><td>5</td><td>Kitchen Inventory and activity history</td></tr>
+<tr><td>6</td><td>Cooking Readiness</td></tr>
+<tr><td>7</td><td>Shopping List and recipe-source merging</td></tr>
+<tr><td>8</td><td>URL and pasted-text Recipe Import Inbox with source-image candidates</td></tr>
+<tr><td>9</td><td>Cooking History, cooking-result photos, and post-cooking Kitchen update</td></tr>
+<tr><td>10</td><td>Basic dashboard suggestions and collections</td></tr>
+<tr><td>11</td><td>Tonight’s Deck private decision mode</td></tr>
+<tr><td>12</td><td>Meal Planning baseline: daily/weekly views, recipe scheduling, servings, and shopping preview</td></tr>
+<tr><td>13</td><td>Meal Planning enhancements: duplicate week, plan templates, optional prep notes, and lightweight leftover labels</td></tr>
+<tr><td>14</td><td>Freemium entitlement baseline: plan configuration, usage rules, account plan UI, and upgrade messaging without live payments</td></tr>
+<tr><td>15</td><td>Paid subscription integration: checkout, customer portal, webhook synchronization, cancellation, and downgrade behavior; separate commercial and legal approval required</td></tr>
+<tr><td>16</td><td>Optional public sharing and community discovery; separate post-MVP approval required</td></tr>
+</tbody>
+</table></section>
+<section id="s19"><h2><span>19.</span> How to Share This with Codex and Claude</h2>
+<h3>Always provide</h3>
+<ul>
+<li>This Master PRD implementation baseline.</li>
+<li>The current Prisma schema after it exists.</li>
+<li>AGENTS.md for repository-wide coding rules.</li>
+<li>CLAUDE.md when Claude Code is used.</li>
+<li>The current sprint brief.</li>
+<li>Relevant architecture decision records and recent changelog entries.</li>
+</ul>
+<h3>Do not ask</h3>
+<pre class="code">Build the whole RecipeVault app from this PRD.</pre>
+<h3>Use instead</h3>
+<pre class="code">Read AGENTS.md, the Master PRD, the current Prisma schema,
+and Sprint 2 specification.
+
+Implement only the approved scope for Sprint 2.
+Do not change files outside the allowed scope.
+Run lint, typecheck, and tests.
+Report assumptions, files changed, migrations, and remaining risks.</pre>
+<h3>Recommended role split</h3>
+<ul>
+<li><strong>Claude Code:</strong> architecture planning, cross-file implementation, refactoring, and documentation.</li>
+<li><strong>Codex:</strong> tightly scoped implementation, tests, debugging, security review, linting, and type-check repair.</li>
+</ul>
+<p>Use one primary builder and one reviewer per sprint. Do not let both tools edit the same feature concurrently.</p>
+</section>
+<section id="s20"><h2><span>20.</span> Definition of Ready for Development</h2>
+<p>Development may begin when the following are frozen:</p>
+<ul>
+<li>Exact MVP scope</li>
+<li>Technical stack</li>
+<li>Repository structure</li>
+<li>Initial Prisma schema</li>
+<li>Authentication choice</li>
+<li>API response convention</li>
+<li>Ownership and authorization rules</li>
+<li>Sprint 0 acceptance criteria</li>
+<li>AGENTS.md and CLAUDE.md</li>
+<li>Media storage provider, limits, privacy, and metadata policy</li>
+<li>Tonight’s Deck session semantics and accessibility behavior</li>
+<li>Meal Plan timezone model, default meal slots, date-range behavior, and status transitions before Sprint 12</li>
+<li>Shopping preview aggregation and duplicate-merge behavior for planned meals</li>
+<li>Free and Premium entitlement matrix, usage metrics, limit behavior, downgrade rules, and upgrade-copy policy before Sprint 14</li>
+<li>Billing provider, supported currencies, tax responsibility, invoices, trials, refunds, cancellation, grace period, legal documents, and webhook model before Sprint 15</li>
+</ul>
+<div class="callout">
+  The full PRD does not need to be “finished forever.” It is a living document. The product baseline must be stable, while implementation details are refined through technical design and sprint work.
+</div></section>
+<section id="s21">
+<h2><span>21.</span> Recipe Media and Tonight’s Deck Extension</h2>
+<h3>21.1 Objective</h3>
+<p>Improve two high-value moments: choosing what to cook and confidently re-cooking a recipe. This extension adds personal visual cooking history and a private swipe-based decision mode without requiring community content.</p>
+<h3>21.2 Recipe media user stories</h3>
+<ul>
+<li>Upload a recipe cover or reference image.</li>
+<li>Add an external image reference while preserving its source URL.</li>
+<li>Replace or remove the primary recipe image.</li>
+<li>Upload photos after cooking and attach them to Cooking History.</li>
+<li>View prior cooking-result photos before re-cooking.</li>
+<li>Promote a previous cooking-result photo to recipe cover.</li>
+</ul>
+<h3>21.3 Tonight’s Deck user stories</h3>
+<ul>
+<li>Open a short recommendation deck from the user’s own library.</li>
+<li>Skip a recipe for the current session without permanently disliking it.</li>
+<li>Shortlist and compare candidates.</li>
+<li>Open details, add to Meal Plan, or choose Cook This.</li>
+<li>Complete the flow without gestures through buttons and keyboard controls.</li>
+</ul>
+<h3>21.4 Boundaries</h3>
+<ul>
+<li>No community dependency.</li>
+<li>No endless engagement feed.</li>
+<li>No image OCR in the initial MVP.</li>
+<li>Cooking photos are private by default.</li>
+<li>External image URLs do not grant redistribution rights.</li>
+</ul>
+</section><section id="s22">
+<h2><span>22.</span> Meal Planning Extension</h2>
+<h3>22.1 Product objective</h3>
+<p>Help users move from “What should I cook?” to a practical daily or weekly plan connected to recipe readiness, shopping needs, and cooking history. The first release should be lightweight and user-directed rather than a complex calendar or nutrition planner.</p>
+<h3>22.2 Core user stories</h3>
+<ul>
+<li>As a user, I can view today’s meals and a weekly overview.</li>
+<li>As a user, I can add a saved recipe to Breakfast, Lunch, Dinner, Snack, or Other.</li>
+<li>As a user, I can choose planned servings and add a note.</li>
+<li>As a user, I can move, duplicate, replace, skip, or remove a planned meal.</li>
+<li>As a user, I can add a recipe from My Recipes, Recipe Detail, Tonight’s Deck, or dashboard suggestions.</li>
+<li>As a user, I can see readiness and missing ingredients for every planned recipe.</li>
+<li>As a user, I can preview combined shopping needs for a day or week before adding them to Shopping.</li>
+<li>As a user, I can mark a planned meal as cooked and continue to Cooking History.</li>
+<li>As a mobile user, I can manage the plan without a dense desktop calendar grid.</li>
+</ul>
+<h3>22.3 Daily view</h3>
+<ul>
+<li>Chronological meal-slot layout.</li>
+<li>Quick Add Recipe action.</li>
+<li>Current readiness and missing-item indicators.</li>
+<li>Actions: View, Move, Duplicate, Replace, Skip, Cook, Remove.</li>
+<li>Optional planning note and servings.</li>
+</ul>
+<h3>22.4 Weekly view</h3>
+<ul>
+<li>Seven-day overview using the user’s timezone.</li>
+<li>Desktop may use a grid; mobile must use day tabs or a chronological list.</li>
+<li>Unplanned-day and unplanned-meal-slot indicators.</li>
+<li>Weekly shopping-preview action.</li>
+<li>Duplicate a day or reuse a previous week is an enhancement, not a baseline requirement.</li>
+</ul>
+<h3>22.5 Shopping integration</h3>
+<ul>
+<li>Aggregate missing ingredients from selected Meal Plan Entries.</li>
+<li>Merge only by canonical Ingredient ID.</li>
+<li>Respect planned servings when scalable recipe quantities are available.</li>
+<li>When quantity scaling is unreliable, preserve original text and show a review warning.</li>
+<li>Show “Needed for” context including Recipe, planned date, and meal type.</li>
+<li>Do not create Shopping Items before explicit confirmation.</li>
+</ul>
+<h3>22.6 Readiness behavior</h3>
+<ul>
+<li>Readiness is calculated from the current Kitchen state.</li>
+<li>Planning does not reserve ingredients or reduce inventory.</li>
+<li>Changes in Kitchen may update readiness indicators for future planned meals.</li>
+<li>Users must be able to refresh or re-check readiness before shopping or cooking.</li>
+</ul>
+<h3>22.7 Status model</h3>
+<table>
+<thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>Planned</td><td>Scheduled but not completed</td></tr>
+<tr><td>Cooked</td><td>User confirmed the meal was cooked</td></tr>
+<tr><td>Skipped</td><td>Not cooked, retained for history</td></tr>
+<tr><td>Moved</td><td>Replaced by a new entry on another date or slot</td></tr>
+<tr><td>Cancelled</td><td>Removed from the active plan</td></tr>
+</tbody>
+</table>
+<h3>22.8 Acceptance criteria</h3>
+<ul>
+<li>Only authenticated owners can view or edit their plans.</li>
+<li>A recipe can be scheduled multiple times.</li>
+<li>Users can complete all plan operations without drag-and-drop.</li>
+<li>Daily and weekly views remain usable on mobile and at 200% zoom.</li>
+<li>Moving and duplicating entries preserve servings and notes unless the user changes them.</li>
+<li>Shopping preview is reviewable and does not mutate Shopping automatically.</li>
+<li>Marking Cooked can create or open a Cooking Event only after user confirmation.</li>
+<li>Meal planning never silently changes Kitchen Inventory.</li>
+</ul>
+<h3>22.9 Explicitly deferred</h3>
+<ul>
+<li>Automatic AI-generated full-week plans</li>
+<li>Calories, macros, and nutrition targets</li>
+<li>Dietitian or medical meal planning</li>
+<li>Advanced batch-cooking workflows and preparation timers</li>
+<li>Automatic leftover quantity accounting</li>
+<li>Household collaboration and shared calendars</li>
+<li>Recurring plans and complex calendar synchronization</li>
+</ul>
+</section>
+<section id="s23">
+<h2><span>23.</span> Freemium and Monetization Extension</h2>
+<h3>23.1 Product objective</h3>
+<p>Create a sustainable business model without weakening trust or making the product feel unusable unless the user pays. The Free plan should prove RecipeVault’s core value, while Premium should monetize higher usage, convenience, advanced decision support, planning depth, and media cost.</p>
+<div class="callout">
+  This section defines a product option and implementation boundaries. It does not authorize public pricing, payment collection, or a billing-provider integration until a separate monetization brief and sprint are approved.
+</div>
+<h3>23.2 Recommended launch approach</h3>
+<ul>
+<li>The private development build and initial user-testing period may remain fully free.</li>
+<li>Activate freemium only after the Save → Decide → Shop → Cook → Remember loop is usable and product value has been validated.</li>
+<li>Introduce entitlement configuration before live billing so limits and upgrade UX can be tested safely.</li>
+<li>Do not advertise a specific price or “unlimited” promise until storage, AI, import, support, tax, and payment costs are understood.</li>
+<li>Use one Premium plan initially; multiple paid tiers should require evidence that different customer groups need them.</li>
+</ul>
+<h3>23.3 Provisional plan matrix</h3>
+<table>
+<thead><tr><th>Capability</th><th>Free</th><th>Premium</th></tr></thead>
+<tbody>
+<tr><td>Manual Recipe Creation</td><td>Included with a configurable active-recipe limit</td><td>Higher limit or fair-use access</td></tr>
+<tr><td>URL and Pasted-Text Import</td><td>Limited monthly allowance</td><td>Higher monthly allowance or fair-use access</td></tr>
+<tr><td>My Recipes, Search, Favorites, and Basic Collections</td><td>Included</td><td>Included, with higher capacity and future organization tools</td></tr>
+<tr><td>Kitchen, Basic Readiness, and Shopping</td><td>Included as part of the core value loop</td><td>Included, with future convenience and automation enhancements</td></tr>
+<tr><td>Cooking History and Notes</td><td>Included; media storage may be limited</td><td>Expanded cooking-photo history and higher media allowance</td></tr>
+<tr><td>Tonight’s Deck</td><td>Limited sessions or deck generations, configurable</td><td>Full access within fair-use boundaries</td></tr>
+<tr><td>Meal Planning</td><td>Limited planning window or active-plan capacity, configurable</td><td>Full weekly planning and approved future planning enhancements</td></tr>
+<tr><td>Smart Suggestions</td><td>Basic explainable suggestions</td><td>Expanded filters, personalization, and future advanced suggestions</td></tr>
+<tr><td>Data Export and Account Deletion</td><td>Always available</td><td>Always available</td></tr>
+</tbody>
+</table>
+<p>Exact numerical limits are launch configuration, not permanent product promises. They must be frozen in the approved monetization brief and must be changeable without editing business rules throughout the codebase.</p>
+<h3>23.4 Pricing and commercial rules</h3>
+<ul>
+<li>Exact price remains To Be Determined through user research, willingness-to-pay testing, competitor review, and unit-cost modeling.</li>
+<li>Support a monthly plan first; an annual plan with a transparent discount may be added when retention behavior is understood.</li>
+<li>A trial is optional and must define eligibility, duration, conversion, reminders, cancellation, and post-trial access.</li>
+<li>Lifetime plans, personalized pricing, complex coupons, and usage-based charges are deferred.</li>
+<li>All public pricing copy, plan names, limits, currencies, provider price IDs, and promotion rules must come from approved centralized configuration.</li>
+<li>Taxes, invoices, refunds, consumer-cancellation rights, and supported selling regions must be reviewed before accepting payment.</li>
+</ul>
+<h3>23.5 Upgrade, cancellation, and downgrade behavior</h3>
+<ul>
+<li>Show upgrade prompts in context, such as when approaching an import, recipe, media, deck, or planning limit.</li>
+<li>Every paywall explains the blocked capability, current usage, relevant limit, Premium benefit, and non-paid alternative when available.</li>
+<li>Successful upgrade updates entitlements only after trusted provider confirmation.</li>
+<li>Cancellation should preserve Premium access until the approved end of the paid period unless refund rules require otherwise.</li>
+<li>Past-due accounts use an approved grace period before downgrade.</li>
+<li>Downgrade never deletes user content. Existing records over a Free limit remain visible and exportable; creation or upload may be paused until usage is reduced or Premium is restored.</li>
+<li>Users must be able to cancel, view plan state, understand renewal timing, export data, and delete their account without contacting support.</li>
+</ul>
+<h3>23.6 Acceptance criteria</h3>
+<ul>
+<li>A Free user can complete the meaningful core cooking loop without entering payment details.</li>
+<li>Entitlements are calculated and enforced on the server from approved plan configuration.</li>
+<li>Client interfaces show current plan, usage, limits, and clear upgrade explanations.</li>
+<li>Changing a plan configuration does not require duplicating conditional logic across pages or route handlers.</li>
+<li>Premium access is not granted from untrusted client claims.</li>
+<li>Duplicate or delayed webhook events do not create conflicting Subscription states.</li>
+<li>Cancellation, payment failure, and downgrade do not delete or transfer user-owned data.</li>
+<li>A billing-provider outage does not block users from reading existing personal data or using entitled Free features.</li>
+<li>Upgrade and account-plan interfaces are keyboard accessible, screen-reader understandable, and usable at 200% zoom.</li>
+</ul>
+<h3>23.7 Explicitly deferred</h3>
+<ul>
+<li>Advertising or sponsored recipe placement</li>
+<li>Selling personal data or using private cooking behavior for external advertising profiles</li>
+<li>Household, team, family, or organization billing</li>
+<li>Multiple Premium tiers without validated need</li>
+<li>Usage-based charges or overage billing</li>
+<li>Complex coupons, referrals, affiliates, and gift subscriptions</li>
+<li>Native App Store or Play Store in-app subscription billing</li>
+<li>Community creator monetization, marketplaces, or paid public content</li>
+</ul>
+</section><div class="footer">RecipeVault Master PRD — Implementation Baseline v1.3</div>
+</main>
+</div>
+</div>
+</body>
+</html>
