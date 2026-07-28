@@ -1,5 +1,4 @@
 import { Heart, Clock, Flame, CalendarPlus, Undo2, BookOpen, X } from "lucide-react";
-import simiFullbody from "@/assets/simi-fullbody.png.asset.json";
 import pastaImg from "/images/simmeri/creamy-mushroom-pasta.jpg?url";
 import misoImg from "/images/simmeri/miso-noodle-soup.jpg?url";
 import tofuImg from "/images/simmeri/crispy-tofu-rice-bowl.jpg?url";
@@ -148,7 +147,7 @@ export function TonightsDeck() {
           </div>
 
           <img
-            src={simiFullbody.url}
+            src="/images/simmeri/simi-fullbody.png"
             alt=""
             aria-hidden
             className="pointer-events-none absolute -bottom-6 -right-4 h-32 w-auto rotate-6 drop-shadow-[0_16px_20px_rgba(0,0,0,0.35)] sm:h-40"
