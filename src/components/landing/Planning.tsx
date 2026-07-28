@@ -1,12 +1,17 @@
 import { SimiSpot } from "./SimiSpot";
+import pancakesImg from "/images/simmeri/banana-oat-pancakes.jpg?url";
+import tomatoImg from "/images/simmeri/roasted-tomato-soup.jpg?url";
+import curryImg from "/images/simmeri/vegetable-curry.jpg?url";
+import pastaImg from "/images/simmeri/creamy-mushroom-pasta.jpg?url";
+import salmonImg from "/images/simmeri/lemon-garlic-salmon.jpg?url";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const meals = [
-  { day: 0, title: "Overnight oats", tone: "bg-cream-deep" },
-  { day: 1, title: "Lentil soup", tone: "bg-sage/30" },
-  { day: 2, title: "Miso eggplant", tone: "bg-duck/40" },
-  { day: 4, title: "Mushroom pasta", tone: "bg-terracotta/20" },
-  { day: 5, title: "Weekend brunch", tone: "bg-caramel/20" },
+  { day: 0, title: "Overnight oats", img: pancakesImg, ready: true },
+  { day: 1, title: "Lentil soup", img: tomatoImg, ready: true },
+  { day: 2, title: "Miso eggplant", img: curryImg, ready: false },
+  { day: 4, title: "Mushroom pasta", img: pastaImg, ready: true },
+  { day: 5, title: "Weekend brunch", img: salmonImg, ready: true },
 ];
 
 const ingredients = [
