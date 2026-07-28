@@ -32,8 +32,8 @@ export function Navbar() {
             scrolled ? "shadow-[var(--shadow-soft)]" : ""
           }`}
         >
-          <a href="#top" className="flex items-center gap-2">
-            <SimiSpot pose="happy" size={34} alt="Simi mark" />
+          <a href="#top" className="flex items-center gap-2.5">
+            <SimiSpot pose="happy" size={52} alt="Simi mark" className="-my-1.5" />
             <span className="font-display text-2xl font-semibold tracking-tight text-olive-deep">
               Simmeri
             </span>
