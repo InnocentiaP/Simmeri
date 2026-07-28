@@ -1,5 +1,5 @@
 import { Link2, Sparkles, Clock, ShoppingBasket } from "lucide-react";
-import { SimiSpot } from "./SimiSpot";
+
 
 const steps = [
   {
@@ -178,9 +178,6 @@ export function HowItWorks() {
             >
               <div className="paper-card relative flex items-center justify-center bg-background p-8">
                 <Vignette kind={s.vignette} />
-                <div className="pointer-events-none absolute -bottom-4 -right-3">
-                  <SimiSpot size={64} alt="" />
-                </div>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-caramel">

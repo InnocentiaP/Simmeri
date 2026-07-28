@@ -1,5 +1,5 @@
 import { Shield, Lock, Download, Sparkles, Check } from "lucide-react";
-import { SimiSpot } from "./SimiSpot";
+
 
 const points = [
   { icon: Lock, title: "Your recipes stay yours.", body: "Private by default. Nothing shared without you." },
@@ -50,9 +50,6 @@ export function Trust() {
                 Export my data
               </button>
             </div>
-          </div>
-          <div className="pointer-events-none absolute -bottom-4 -right-4">
-            <SimiSpot size={92} alt="" />
           </div>
         </div>
         <div>

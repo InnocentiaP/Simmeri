@@ -62,7 +62,7 @@ export function Problems() {
                 <div className="h-1.5 w-4/6 rounded-full bg-cocoa/20" />
               </div>
               <div className="mt-2 flex justify-end">
-                <SimiSpot size={28} alt="" />
+                <span className="h-2 w-8 rounded-full bg-olive-deep/40" />
               </div>
             </div>
           </div>

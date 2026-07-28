@@ -21,7 +21,7 @@ export function FinalCTA() {
         <img
           src={simiFullbody.url}
           alt="Simi the kitchen duck, ready to cook"
-          className="mx-auto h-40 w-auto drop-shadow-[0_16px_20px_rgba(62,42,33,0.25)] sm:h-52"
+          className="mx-auto h-56 w-auto drop-shadow-[0_16px_20px_rgba(62,42,33,0.25)] sm:h-72"
         />
         <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-caramel">
           Early access
