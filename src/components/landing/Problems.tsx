@@ -1,5 +1,5 @@
 import { Bookmark, Compass, Refrigerator, ListChecks } from "lucide-react";
-import { SimiSpot } from "./SimiSpot";
+
 
 const items = [
   {
