@@ -48,23 +48,35 @@ export function TonightsDeck() {
           <div className="relative h-[540px] w-full">
             {/* Back layered cards */}
             {layered.map((c, i) => (
-              <div
+              <article
                 key={c.title}
-                className={`absolute inset-x-6 top-0 rounded-[28px] border border-border/50 p-5 shadow-[var(--shadow-cozy)] ${c.tone}`}
+                className="absolute inset-x-6 top-0 overflow-hidden rounded-[28px] border border-border/50 bg-background shadow-[var(--shadow-cozy)]"
                 style={{
                   transform: `translate(${c.offset}px, ${-i * 6 - 6}px) rotate(${c.rotate}deg)`,
                   zIndex: 5 - i,
                   height: "88%",
                 }}
               >
-                <span className="rounded-full bg-background/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-cocoa/80">
-                  Almost ready
-                </span>
-                <p className="mt-4 font-hand text-xl text-olive-deep">Tonight</p>
-                <p className="font-display text-2xl leading-tight text-coffee">
-                  {c.title}
-                </p>
-              </div>
+                <div className="relative aspect-[4/3] w-full">
+                  <img
+                    src={c.img}
+                    alt={c.title}
+                    loading="lazy"
+                    width={1024}
+                    height={768}
+                    className="h-full w-full object-cover"
+                  />
+                  <span className="absolute left-3 top-3 rounded-full bg-background/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-cocoa/80">
+                    {c.tag}
+                  </span>
+                </div>
+                <div className="p-4">
+                  <p className="font-hand text-lg text-olive-deep">Tonight</p>
+                  <p className="font-display text-xl leading-tight text-coffee">
+                    {c.title}
+                  </p>
+                </div>
+              </article>
             ))}
 
             {/* Active card */}
