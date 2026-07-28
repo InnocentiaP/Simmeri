@@ -1,10 +1,12 @@
 import { Heart, Clock, Flame, CalendarPlus, Undo2, BookOpen, X } from "lucide-react";
 import simiFullbody from "@/assets/simi-fullbody.png.asset.json";
 import pastaImg from "/images/simmeri/creamy-mushroom-pasta.jpg?url";
+import misoImg from "/images/simmeri/miso-noodle-soup.jpg?url";
+import tofuImg from "/images/simmeri/crispy-tofu-rice-bowl.jpg?url";
 
 const layered = [
-  { title: "Crispy tofu rice bowl", tone: "bg-duck/40", rotate: 6, offset: 28 },
-  { title: "Miso noodle soup", tone: "bg-cream-deep", rotate: 3, offset: 14 },
+  { title: "Crispy tofu rice bowl", img: tofuImg, tag: "Cozy pick", rotate: 6, offset: 28 },
+  { title: "Miso noodle soup", img: misoImg, tag: "Almost ready", rotate: 3, offset: 14 },
 ];
 
 export function TonightsDeck() {
