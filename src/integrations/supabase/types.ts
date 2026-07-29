@@ -260,7 +260,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      save_recipe_with_details: {
+        Args: {
+          p_recipe_id: string | null
+          p_title: string
+          p_description: string | null
+          p_servings: number | null
+          p_prep_time_minutes: number | null
+          p_cook_time_minutes: number | null
+          p_notes: string | null
+          p_ingredients: Json
+          p_steps: Json
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

@@ -31,14 +31,14 @@ export function Navbar() {
             scrolled ? "shadow-[var(--shadow-soft)]" : ""
           }`}
         >
-          <a href="#top" className="flex items-center gap-2.5">
+          <a href="#top" className="flex min-w-0 shrink items-center gap-2.5">
             <img
               src="/images/simmeri/simi-logo.png"
               alt="Simi mark"
-              className="h-11 w-auto object-contain -my-1.5"
+              className="h-11 w-auto shrink-0 object-contain -my-1.5"
               draggable={false}
             />
-            <span className="font-display text-2xl font-semibold tracking-tight text-olive-deep">
+            <span className="truncate font-display text-2xl font-semibold tracking-tight text-olive-deep">
               Simmeri
             </span>
           </a>
@@ -54,7 +54,7 @@ export function Navbar() {
               </li>
             ))}
           </ul>
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
             <a
               href="/login"
               className="hidden rounded-full px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/60 sm:inline-block"
@@ -63,7 +63,7 @@ export function Navbar() {
             </a>
             <a
               href="#early-access"
-              className="inline-flex items-center rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5 hover:bg-olive"
+              className="inline-flex shrink-0 items-center rounded-full bg-olive-deep px-3 py-2 text-xs font-medium whitespace-nowrap text-primary-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5 hover:bg-olive sm:px-4 sm:text-sm"
             >
               Join Early Access
             </a>
@@ -72,7 +72,7 @@ export function Navbar() {
               aria-label="Toggle menu"
               aria-expanded={open}
               onClick={() => setOpen((v) => !v)}
-              className="ml-1 flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background text-cocoa md:hidden"
+              className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background text-cocoa md:hidden"
             >
               <span aria-hidden className="text-lg leading-none">
                 {open ? "×" : "≡"}
@@ -82,6 +82,14 @@ export function Navbar() {
         </nav>
         {open && (
           <div className="mt-2 rounded-3xl border border-border/70 bg-cream p-3 shadow-[var(--shadow-paper)] md:hidden">
+            <a
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="block rounded-2xl bg-olive-deep/10 px-4 py-2.5 text-sm font-medium text-olive-deep hover:bg-olive-deep/15"
+            >
+              Log in
+            </a>
+            <div className="my-2 h-px bg-border/70" aria-hidden />
             <ul className="flex flex-col">
               {links.map((l) => (
                 <li key={l.href}>

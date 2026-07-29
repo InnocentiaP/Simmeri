@@ -59,67 +59,45 @@ export interface RecipeFormValues {
   steps: Array<{ instruction: string }>;
 }
 
+// Creates or updates a recipe together with its ingredients and steps as a
+// single database transaction via the save_recipe_with_details RPC (see
+// supabase/migrations/20260729010000_save_recipe_with_details_rpc.sql). If any
+// part of the write fails (e.g. a constraint violation on one ingredient row),
+// the entire operation rolls back — the recipe is never left with stale or
+// missing children. This call is genuinely atomic, not a best-effort sequence.
 export async function saveRecipe(values: RecipeFormValues, existingId?: string) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not signed in");
-
-  const payload = {
-    user_id: user.id,
-    title: values.title.trim(),
-    description: values.description.trim() || null,
-    servings: values.servings,
-    prep_time_minutes: values.prep_time_minutes,
-    cook_time_minutes: values.cook_time_minutes,
-    notes: values.notes.trim() || null,
-  };
-
-  let recipeId = existingId;
-  if (existingId) {
-    const { error } = await supabase.from("recipes").update(payload).eq("id", existingId);
-    if (error) throw error;
-  } else {
-    const { data, error } = await supabase.from("recipes").insert(payload).select("id").single();
-    if (error) throw error;
-    recipeId = data.id;
-  }
-  if (!recipeId) throw new Error("Missing recipe id");
-
-  // Replace ingredients & steps
-  await supabase.from("recipe_ingredients").delete().eq("recipe_id", recipeId);
-  await supabase.from("recipe_steps").delete().eq("recipe_id", recipeId);
-
-  const ingredientsToInsert = values.ingredients
+  const ingredientsPayload = values.ingredients
     .filter((i) => i.display_name.trim())
     .map((i, idx) => ({
-      recipe_id: recipeId!,
-      user_id: user.id,
       display_name: i.display_name.trim(),
-      raw_text: i.raw_text.trim() || null,
-      quantity_text: i.quantity_text.trim() || null,
-      unit: i.unit.trim() || null,
-      preparation_note: i.preparation_note.trim() || null,
+      raw_text: i.raw_text.trim(),
+      quantity_text: i.quantity_text.trim(),
+      unit: i.unit.trim(),
+      preparation_note: i.preparation_note.trim(),
       importance: i.importance,
       position: idx,
     }));
-  if (ingredientsToInsert.length) {
-    const { error } = await supabase.from("recipe_ingredients").insert(ingredientsToInsert);
-    if (error) throw error;
-  }
 
-  const stepsToInsert = values.steps
+  const stepsPayload = values.steps
     .filter((s) => s.instruction.trim())
     .map((s, idx) => ({
-      recipe_id: recipeId!,
-      user_id: user.id,
       instruction: s.instruction.trim(),
       position: idx,
     }));
-  if (stepsToInsert.length) {
-    const { error } = await supabase.from("recipe_steps").insert(stepsToInsert);
-    if (error) throw error;
-  }
+
+  const { data: recipeId, error } = await supabase.rpc("save_recipe_with_details", {
+    p_recipe_id: existingId ?? null,
+    p_title: values.title.trim(),
+    p_description: values.description.trim() || null,
+    p_servings: values.servings,
+    p_prep_time_minutes: values.prep_time_minutes,
+    p_cook_time_minutes: values.cook_time_minutes,
+    p_notes: values.notes.trim() || null,
+    p_ingredients: ingredientsPayload,
+    p_steps: stepsPayload,
+  });
+  if (error) throw error;
+  if (!recipeId) throw new Error("Save failed: no recipe id returned");
 
   return recipeId;
 }

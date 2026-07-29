@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Search } from "lucide-react";
+import { Plus, Trash2, Search, Archive, ArchiveRestore } from "lucide-react";
 import type { KitchenItem } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/app/kitchen")({
@@ -32,15 +32,16 @@ function Kitchen() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [locationFilter, setLocationFilter] = useState<string>("all");
   const [showAdd, setShowAdd] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState("");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["kitchen"],
+    queryKey: ["kitchen", showArchived],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("kitchen_items")
-        .select("*")
-        .is("archived_at", null)
-        .order("ingredient_name");
+      let query = supabase.from("kitchen_items").select("*").order("ingredient_name");
+      if (!showArchived) query = query.is("archived_at", null);
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
@@ -55,17 +56,77 @@ function Kitchen() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const renameMut = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase
+        .from("kitchen_items")
+        .update({ ingredient_name: name })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Renamed");
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+    onSettled: () => setEditingNameId(null),
+  });
+
+  const archiveMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("kitchen_items")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Archived");
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const restoreMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("kitchen_items")
+        .update({ archived_at: null })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Restored");
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const removeMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("kitchen_items").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Removed");
+      toast.success("Removed permanently");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  function startRename(item: KitchenItem) {
+    setEditingNameId(item.id);
+    setNameDraft(item.ingredient_name);
+  }
+
+  function commitRename(id: string) {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) {
+      toast.error("Name can't be empty");
+      return;
+    }
+    renameMut.mutate({ id, name: trimmed });
+  }
 
   const filtered = useMemo(() => {
     const list = data ?? [];
@@ -127,6 +188,14 @@ function Kitchen() {
             </option>
           ))}
         </select>
+        <label className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm text-cocoa">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+          />
+          Show archived
+        </label>
       </div>
 
       {isLoading && <div className="text-cocoa/70">Loading…</div>}
@@ -150,13 +219,44 @@ function Kitchen() {
                 <th className="px-4 py-3">Ingredient</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Location</th>
-                <th className="px-4 py-3 w-10" />
+                <th className="px-4 py-3 w-24" />
               </tr>
             </thead>
             <tbody>
               {filtered.map((k) => (
-                <tr key={k.id} className="border-t border-border/50">
-                  <td className="px-4 py-3 font-medium text-cocoa">{k.ingredient_name}</td>
+                <tr key={k.id} className={`border-t border-border/50 ${k.archived_at ? "opacity-60" : ""}`}>
+                  <td className="px-4 py-3 font-medium text-cocoa">
+                    {editingNameId === k.id ? (
+                      <input
+                        autoFocus
+                        value={nameDraft}
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        onBlur={() => commitRename(k.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitRename(k.id);
+                          }
+                          if (e.key === "Escape") setEditingNameId(null);
+                        }}
+                        className="rounded-lg border border-border bg-background px-2 py-1 text-sm"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startRename(k)}
+                        className="rounded px-1 -mx-1 text-left hover:bg-cream-deep/40"
+                        aria-label={`Edit name for ${k.ingredient_name}`}
+                      >
+                        {k.ingredient_name}
+                        {k.archived_at && (
+                          <span className="ml-2 rounded-full bg-cocoa/10 px-2 py-0.5 text-xs text-cocoa">
+                            Archived
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <select
                       value={k.status}
@@ -188,13 +288,39 @@ function Kitchen() {
                     </select>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => removeMut.mutate(k.id)}
-                      aria-label={`Remove ${k.ingredient_name}`}
-                      className="rounded-full border border-border p-1.5 text-terracotta hover:bg-terracotta/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex justify-end gap-1">
+                      {k.archived_at ? (
+                        <button
+                          onClick={() => restoreMut.mutate(k.id)}
+                          aria-label={`Restore ${k.ingredient_name}`}
+                          title="Restore"
+                          className="rounded-full border border-border p-1.5 text-cocoa hover:bg-cream-deep/40"
+                        >
+                          <ArchiveRestore className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => archiveMut.mutate(k.id)}
+                          aria-label={`Archive ${k.ingredient_name}`}
+                          title="Archive"
+                          className="rounded-full border border-border p-1.5 text-cocoa hover:bg-cream-deep/40"
+                        >
+                          <Archive className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Permanently remove "${k.ingredient_name}"?`)) {
+                            removeMut.mutate(k.id);
+                          }
+                        }}
+                        aria-label={`Permanently remove ${k.ingredient_name}`}
+                        title="Remove permanently"
+                        className="rounded-full border border-border p-1.5 text-terracotta hover:bg-terracotta/10"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

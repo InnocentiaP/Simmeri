@@ -28,7 +28,8 @@ export interface ReadinessExplanation {
   running_low: string[];
   needs_check: string[];
   missing_core: string[];
-  missing_supporting: string[]; // supporting OR seasoning
+  missing_supporting: string[];
+  missing_seasoning: string[];
   ignored_optional: string[];
 }
 
@@ -67,6 +68,7 @@ export function computeReadiness(
     needs_check: [],
     missing_core: [],
     missing_supporting: [],
+    missing_seasoning: [],
     ignored_optional: [],
   };
 
@@ -79,7 +81,8 @@ export function computeReadiness(
     const status = byName.get(norm(name));
     if (!status || status === "out_of_stock") {
       if (ing.importance === "core") exp.missing_core.push(name);
-      else exp.missing_supporting.push(name); // supporting + seasoning
+      else if (ing.importance === "seasoning") exp.missing_seasoning.push(name);
+      else exp.missing_supporting.push(name);
       continue;
     }
     if (status === "unknown") exp.needs_check.push(name);
@@ -87,9 +90,11 @@ export function computeReadiness(
     else exp.available.push(name);
   }
 
+  const missingNonCore = exp.missing_supporting.length + exp.missing_seasoning.length;
+
   let label: ReadinessLabel;
   if (exp.missing_core.length > 0) label = "not_ready";
-  else if (exp.missing_supporting.length > 0) label = "needs_shopping";
+  else if (missingNonCore > 0) label = "needs_shopping";
   else if (exp.needs_check.length > 0) label = "check_first";
   else if (exp.running_low.length > 0) label = "almost_ready";
   else label = "ready_to_cook";
@@ -136,8 +141,10 @@ function shortLabel(label: ReadinessLabel, exp: ReadinessExplanation): string {
       return `Running low on ${exp.running_low.length} item${exp.running_low.length === 1 ? "" : "s"}.`;
     case "check_first":
       return `Check ${exp.needs_check.length} item${exp.needs_check.length === 1 ? "" : "s"} before starting.`;
-    case "needs_shopping":
-      return `${exp.missing_supporting.length} item${exp.missing_supporting.length === 1 ? "" : "s"} to buy.`;
+    case "needs_shopping": {
+      const count = exp.missing_supporting.length + exp.missing_seasoning.length;
+      return `${count} item${count === 1 ? "" : "s"} to buy.`;
+    }
     case "not_ready":
       return `Missing ${exp.missing_core.length} core ingredient${exp.missing_core.length === 1 ? "" : "s"}.`;
   }

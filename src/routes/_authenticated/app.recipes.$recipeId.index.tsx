@@ -153,7 +153,8 @@ function RecipeDetail() {
           <ExpList label="Running low" items={readiness.explanation.running_low} />
           <ExpList label="Check first" items={readiness.explanation.needs_check} />
           <ExpList label="Missing core" items={readiness.explanation.missing_core} />
-          <ExpList label="Needs shopping" items={readiness.explanation.missing_supporting} />
+          <ExpList label="Missing supporting" items={readiness.explanation.missing_supporting} />
+          <ExpList label="Missing seasoning" items={readiness.explanation.missing_seasoning} />
           <ExpList label="Optional (ignored)" items={readiness.explanation.ignored_optional} />
         </div>
       </section>
