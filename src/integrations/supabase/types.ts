@@ -35,6 +35,226 @@ export type Database = {
         }
         Relationships: []
       }
+      kitchen_items: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          ingredient_name: string
+          normalized_name: string | null
+          status: string
+          storage_location: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          ingredient_name: string
+          normalized_name?: string | null
+          status?: string
+          storage_location?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          ingredient_name?: string
+          normalized_name?: string | null
+          status?: string
+          storage_location?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          onboarding_completed: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recipe_ingredients: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          importance: string
+          position: number
+          preparation_note: string | null
+          quantity_text: string | null
+          raw_text: string | null
+          recipe_id: string
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          importance?: string
+          position?: number
+          preparation_note?: string | null
+          quantity_text?: string | null
+          raw_text?: string | null
+          recipe_id: string
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          importance?: string
+          position?: number
+          preparation_note?: string | null
+          quantity_text?: string | null
+          raw_text?: string | null
+          recipe_id?: string
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_steps: {
+        Row: {
+          created_at: string
+          id: string
+          instruction: string
+          position: number
+          recipe_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instruction: string
+          position?: number
+          recipe_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instruction?: string
+          position?: number
+          recipe_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_steps_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipes: {
+        Row: {
+          archived_at: string | null
+          cook_time_minutes: number | null
+          created_at: string
+          description: string | null
+          id: string
+          notes: string | null
+          prep_time_minutes: number | null
+          servings: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          cook_time_minutes?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          prep_time_minutes?: number | null
+          servings?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          cook_time_minutes?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          prep_time_minutes?: number | null
+          servings?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          language: string
+          measurement_system: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          language?: string
+          measurement_system?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          language?: string
+          measurement_system?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
