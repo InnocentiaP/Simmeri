@@ -102,6 +102,25 @@ export async function saveRecipe(values: RecipeFormValues, existingId?: string) 
   return recipeId;
 }
 
+// Saves an imported recipe through the same saveRecipe()/RPC path as a
+// manually-created recipe, then sets the source columns via a follow-up
+// update — same direct-update pattern as archiveRecipe/unarchiveRecipe below.
+// No new RPC parameters: save_recipe_with_details is reused unmodified.
+export async function saveImportedRecipe(
+  values: RecipeFormValues,
+  source: { url: string | null; title: string | null },
+) {
+  const recipeId = await saveRecipe(values);
+  if (source.url || source.title) {
+    const { error } = await supabase
+      .from("recipes")
+      .update({ source_url: source.url, source_title: source.title })
+      .eq("id", recipeId);
+    if (error) throw error;
+  }
+  return recipeId;
+}
+
 export async function archiveRecipe(id: string) {
   const { error } = await supabase
     .from("recipes")

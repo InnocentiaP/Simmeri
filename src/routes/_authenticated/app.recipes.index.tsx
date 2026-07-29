@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
 import { archiveRecipe, unarchiveRecipe } from "@/lib/api";
 import { toast } from "sonner";
-import { Archive, ArchiveRestore, Clock, Users, Pencil, Plus, Search } from "lucide-react";
+import { Archive, ArchiveRestore, Clock, Users, Pencil, Plus, Search, Import } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/recipes/")({
   head: () => ({ meta: [{ title: "My Recipes — Simmeri" }] }),
@@ -79,12 +79,20 @@ function RecipesList() {
           <h1 className="font-display text-3xl font-semibold text-olive-deep">My Recipes</h1>
           <p className="text-sm text-cocoa/70">Everything you've saved and cooked.</p>
         </div>
-        <Link
-          to="/app/recipes/new"
-          className="inline-flex items-center gap-1.5 rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-olive"
-        >
-          <Plus className="h-4 w-4" /> Add recipe
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/app/recipes/import"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-cocoa hover:bg-cream-deep/40"
+          >
+            <Import className="h-4 w-4" /> Import
+          </Link>
+          <Link
+            to="/app/recipes/new"
+            className="inline-flex items-center gap-1.5 rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-olive"
+          >
+            <Plus className="h-4 w-4" /> Add recipe
+          </Link>
+        </div>
       </header>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">

@@ -3,8 +3,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRecipeDetail, archiveRecipe, unarchiveRecipe, deleteRecipe } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
+import { shouldShowSourceLink, safeHostname } from "@/lib/url-safety";
 import { toast } from "sonner";
-import { ChevronLeft, Pencil, Archive, ArchiveRestore, Trash2, Clock, Users } from "lucide-react";
+import {
+  ChevronLeft,
+  Pencil,
+  Archive,
+  ArchiveRestore,
+  Trash2,
+  Clock,
+  Users,
+  ExternalLink,
+} from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/app/recipes/$recipeId/")({
@@ -140,6 +150,23 @@ function RecipeDetail() {
           </button>
         </div>
       </header>
+
+      {recipe.source_url && shouldShowSourceLink(recipe.source_url) && (
+        <section className="mb-6 rounded-3xl border border-border/70 bg-cream/40 p-5">
+          <h2 className="mb-2 font-display text-lg font-semibold text-olive-deep">Source</h2>
+          <p className="text-sm text-cocoa/80">
+            {recipe.source_title || safeHostname(recipe.source_url) || "Original recipe"}
+          </p>
+          <a
+            href={recipe.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-olive-deep underline underline-offset-2"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> View original recipe
+          </a>
+        </section>
+      )}
 
       <section className={`mb-6 rounded-3xl border p-5 ${readinessTone(readiness.label)}`}>
         <div className="flex items-center gap-3">
