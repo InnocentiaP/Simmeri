@@ -1,29 +1,55 @@
-# Welcome to your Lovable project
+# Simmeri
 
-This project was built with [Lovable](https://lovable.dev).
+Simmeri is a cozy, AI-assisted personal cooking workspace: capture recipes, track a lightweight kitchen inventory, see an explainable cooking-readiness status, and manage your own recipe collection — all backed by Supabase.
 
-## Build with Lovable
+## Current MVP features
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+- Email/password authentication (signup, login, logout, forgot/reset password)
+- Protected `/app` application shell alongside the public marketing site at `/`
+- Manual recipe creation with ingredients (with importance) and steps
+- My Recipes: create, view, edit, archive, and delete recipes
+- Kitchen inventory: track ingredient status (available, running low, out of stock, unknown) and storage location
+- Deterministic, explainable Cooking Readiness for each recipe, derived from your current Kitchen state
+- Real-data dashboard reflecting your own recipes and kitchen items
+- Account settings and preferences
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+## Technology stack
 
-## Development
+- [TanStack Start](https://tanstack.com/start) + [TanStack Router](https://tanstack.com/router) + [Vite](https://vitejs.dev/)
+- [Nitro](https://nitro.build/) (Vercel preset) for the server/build output
+- [Supabase](https://supabase.com/) for authentication and PostgreSQL (with row-level security)
+- React 19, TypeScript, Tailwind CSS, shadcn/ui
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Local setup
 
 ```sh
 git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+cd pixel-perfect-clone
+npm install
 ```
 
-## Built with
+Create a `.env` file (see `.env.example`) with the following variables:
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_PROJECT_ID`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_SUPABASE_PROJECT_ID`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; not required for normal development)
+
+## Scripts
+
+```sh
+npm run dev      # start the local dev server
+npm run build    # production build (Nitro/Vercel output)
+npm run lint      # lint the codebase
+```
+
+## Production
+
+Live at: https://simmeri.vercel.app
+
+## Further documentation
+
+For the full development workflow, architecture decisions, and current sprint status, see [`SETUP_GUIDE.md`](./SETUP_GUIDE.md), [`CLAUDE.md`](./CLAUDE.md), and `docs/sprints/CURRENT_SPRINT.md`.
