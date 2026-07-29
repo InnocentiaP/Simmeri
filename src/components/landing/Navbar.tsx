@@ -56,7 +56,7 @@ export function Navbar() {
           </ul>
           <div className="flex items-center gap-1.5">
             <a
-              href="#early-access"
+              href="/login"
               className="hidden rounded-full px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/60 sm:inline-block"
             >
               Log in

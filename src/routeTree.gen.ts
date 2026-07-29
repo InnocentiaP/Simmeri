@@ -9,38 +9,239 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
+import { Route as AuthenticatedAppKitchenRouteImport } from './routes/_authenticated/app.kitchen'
+import { Route as AuthenticatedAppRecipesIndexRouteImport } from './routes/_authenticated/app.recipes.index'
+import { Route as AuthenticatedAppRecipesNewRouteImport } from './routes/_authenticated/app.recipes.new'
+import { Route as AuthenticatedAppRecipesRecipeIdIndexRouteImport } from './routes/_authenticated/app.recipes.$recipeId.index'
+import { Route as AuthenticatedAppRecipesRecipeIdEditRouteImport } from './routes/_authenticated/app.recipes.$recipeId.edit'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/app/',
+  path: '/app/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppSettingsRoute =
+  AuthenticatedAppSettingsRouteImport.update({
+    id: '/app/settings',
+    path: '/app/settings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppKitchenRoute = AuthenticatedAppKitchenRouteImport.update({
+  id: '/app/kitchen',
+  path: '/app/kitchen',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppRecipesIndexRoute =
+  AuthenticatedAppRecipesIndexRouteImport.update({
+    id: '/app/recipes/',
+    path: '/app/recipes/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppRecipesNewRoute =
+  AuthenticatedAppRecipesNewRouteImport.update({
+    id: '/app/recipes/new',
+    path: '/app/recipes/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppRecipesRecipeIdIndexRoute =
+  AuthenticatedAppRecipesRecipeIdIndexRouteImport.update({
+    id: '/app/recipes/$recipeId/',
+    path: '/app/recipes/$recipeId/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppRecipesRecipeIdEditRoute =
+  AuthenticatedAppRecipesRecipeIdEditRouteImport.update({
+    id: '/app/recipes/$recipeId/edit',
+    path: '/app/recipes/$recipeId/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/app/kitchen': typeof AuthenticatedAppKitchenRoute
+  '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/app/recipes/': typeof AuthenticatedAppRecipesIndexRoute
+  '/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
+  '/app/recipes/$recipeId/': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/app/kitchen': typeof AuthenticatedAppKitchenRoute
+  '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app': typeof AuthenticatedAppIndexRoute
+  '/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/app/recipes': typeof AuthenticatedAppRecipesIndexRoute
+  '/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
+  '/app/recipes/$recipeId': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/_authenticated/app/kitchen': typeof AuthenticatedAppKitchenRoute
+  '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/_authenticated/app/recipes/': typeof AuthenticatedAppRecipesIndexRoute
+  '/_authenticated/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
+  '/_authenticated/app/recipes/$recipeId/': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/auth/callback'
+    | '/app/kitchen'
+    | '/app/settings'
+    | '/app/'
+    | '/app/recipes/new'
+    | '/app/recipes/'
+    | '/app/recipes/$recipeId/edit'
+    | '/app/recipes/$recipeId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/auth/callback'
+    | '/app/kitchen'
+    | '/app/settings'
+    | '/app'
+    | '/app/recipes/new'
+    | '/app/recipes'
+    | '/app/recipes/$recipeId/edit'
+    | '/app/recipes/$recipeId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/auth/callback'
+    | '/_authenticated/app/kitchen'
+    | '/_authenticated/app/settings'
+    | '/_authenticated/app/'
+    | '/_authenticated/app/recipes/new'
+    | '/_authenticated/app/recipes/'
+    | '/_authenticated/app/recipes/$recipeId/edit'
+    | '/_authenticated/app/recipes/$recipeId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignupRoute: typeof SignupRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +249,99 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/app'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/settings': {
+      id: '/_authenticated/app/settings'
+      path: '/app/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/kitchen': {
+      id: '/_authenticated/app/kitchen'
+      path: '/app/kitchen'
+      fullPath: '/app/kitchen'
+      preLoaderRoute: typeof AuthenticatedAppKitchenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/recipes/': {
+      id: '/_authenticated/app/recipes/'
+      path: '/app/recipes'
+      fullPath: '/app/recipes/'
+      preLoaderRoute: typeof AuthenticatedAppRecipesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/recipes/new': {
+      id: '/_authenticated/app/recipes/new'
+      path: '/app/recipes/new'
+      fullPath: '/app/recipes/new'
+      preLoaderRoute: typeof AuthenticatedAppRecipesNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/recipes/$recipeId/': {
+      id: '/_authenticated/app/recipes/$recipeId/'
+      path: '/app/recipes/$recipeId'
+      fullPath: '/app/recipes/$recipeId/'
+      preLoaderRoute: typeof AuthenticatedAppRecipesRecipeIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/recipes/$recipeId/edit': {
+      id: '/_authenticated/app/recipes/$recipeId/edit'
+      path: '/app/recipes/$recipeId/edit'
+      fullPath: '/app/recipes/$recipeId/edit'
+      preLoaderRoute: typeof AuthenticatedAppRecipesRecipeIdEditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppKitchenRoute: typeof AuthenticatedAppKitchenRoute
+  AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppRecipesNewRoute: typeof AuthenticatedAppRecipesNewRoute
+  AuthenticatedAppRecipesIndexRoute: typeof AuthenticatedAppRecipesIndexRoute
+  AuthenticatedAppRecipesRecipeIdEditRoute: typeof AuthenticatedAppRecipesRecipeIdEditRoute
+  AuthenticatedAppRecipesRecipeIdIndexRoute: typeof AuthenticatedAppRecipesRecipeIdIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppKitchenRoute: AuthenticatedAppKitchenRoute,
+  AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppRecipesNewRoute: AuthenticatedAppRecipesNewRoute,
+  AuthenticatedAppRecipesIndexRoute: AuthenticatedAppRecipesIndexRoute,
+  AuthenticatedAppRecipesRecipeIdEditRoute:
+    AuthenticatedAppRecipesRecipeIdEditRoute,
+  AuthenticatedAppRecipesRecipeIdIndexRoute:
+    AuthenticatedAppRecipesRecipeIdIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignupRoute: SignupRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

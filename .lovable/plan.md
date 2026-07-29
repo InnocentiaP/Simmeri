@@ -1,56 +1,101 @@
-## Fix broken mascot crops on Simmeri landing
 
-The `SimiSpot` component crops character-sheet PNGs by percentage, which leaks neighbouring cells ("In-App Us…", "age Ideas", "Peeki the…", "cook!", etc.) into every place a mascot appears. The user has now supplied three clean transparent assets that replace the need for any crop math:
+# Simmeri Course Submission MVP — Implementation Plan
 
-- `Simmeri_Logo-2.png` — wordmark + Simi in a pot (for navbar/footer branding)
-- `Simi_Official_Fullbody_Transparent.png-2.png` — full body Simi with spoon + "My Recipes"
-- `Simi_Official_Head_Transparent.png-2.png` — head sticker (small spots, chips, form states)
+## Scope
 
-No section rebuild — just swap asset sources, delete the crop system, and replace two "mascot-in-a-frame" panels with coded UI that actually shows the product.
+Add a functional authenticated web app to the existing Simmeri repo without touching the landing page, navbar, footer, mascot assets, or early-access flow. Stack stays: Vite + TanStack Start/Router + Supabase + Tailwind + shadcn/ui + npm + Nitro `vercel` preset.
 
-### Assets to register first (via `lovable-assets`)
-- `src/assets/simi-logo.png.asset.json` ← `Simmeri_Logo-2.png`
-- `src/assets/simi-fullbody.png.asset.json` ← `Simi_Official_Fullbody_Transparent.png-2.png`
-- `src/assets/simi-head.png.asset.json` ← `Simi_Official_Head_Transparent.png-2.png`
-- Regenerate `public/favicon.png` from the new head sticker (tight square crop).
-- Keep existing `simi-hero.png` pointer (already the correct full-body art) — use the new fullbody asset as the canonical replacement and retire `simi-hero`, `simi-sheet`, `simi-usage` pointers at the end.
+## 1. Database (single additive Supabase migration)
 
-### Component-by-component changes
+Tables (all with `id uuid pk`, `user_id uuid references auth.users on delete cascade`, `created_at`, `updated_at`, plus GRANTs to `authenticated` + `service_role`, RLS enabled, owner-only policies `auth.uid() = user_id` for SELECT/INSERT/UPDATE/DELETE):
 
-**`SimiSpot.tsx`** — Delete the crop-math version. Replace with a tiny component that just renders the head-sticker PNG at a given size with an `alt`. All existing `pose="…"` props become ignored (single art, kept as an optional label). This alone fixes every circled crop in Hero helper bubble, Problems arrow row, Planning helper, TonightsDeck peek, Footer, FinalCTA, EarlyAccessForm state icons, Navbar mark.
+- `profiles` — `id = auth.users.id`, `display_name`, `onboarding_completed bool default false`.
+- `user_preferences` — `language text default 'en'`, `measurement_system text check in ('metric','us') default 'metric'`, `timezone text default 'UTC'`.
+- `recipes` — `title`, `description`, `servings int`, `prep_time_minutes int`, `cook_time_minutes int`, `notes`, `archived_at timestamptz`.
+- `recipe_ingredients` — `recipe_id fk → recipes on delete cascade`, `raw_text`, `display_name`, `quantity_text`, `unit`, `preparation_note`, `importance text check in ('core','supporting','seasoning','optional')`, `position int`. Denormalized `user_id` for RLS via `auth.uid() = user_id`.
+- `recipe_steps` — `recipe_id fk`, `instruction text`, `position int`, denormalized `user_id`.
+- `kitchen_items` — `ingredient_name`, `normalized_name text` (generated: `lower(trim(ingredient_name))`), `status text check in ('available','running_low','out_of_stock','unknown')`, `storage_location text check in ('pantry','refrigerator','freezer','spice_rack','other')`, `archived_at timestamptz`.
 
-**`Navbar.tsx`** — Replace the cropped head with the head-sticker asset at 28px next to the wordmark. Circled in hero screenshot.
+Trigger `handle_new_user()` on `auth.users` insert → creates `profiles` + `user_preferences` rows. `update_updated_at_column()` trigger on each table.
 
-**`Hero.tsx`** — Two fixes: (1) the small helper-bubble avatar becomes the head sticker via the new `SimiSpot`; (2) the big overlapping mascot (currently `simi-hero.png`) switches to `simi-fullbody` so it matches the official art and sits transparent over the mock. Keep composition, chips, dashboard card as-is.
+Indexes: `recipes(user_id, archived_at)`, `recipe_ingredients(recipe_id, position)`, `recipe_steps(recipe_id, position)`, `kitchen_items(user_id, normalized_name)`.
 
-**`Problems.tsx`** — The "concerned → checking recipes" collage in the screenshot pulls two garbage crops from the sheet. Replace with a coded before/after mini-illustration: a messy stack of paper cards (rotated, olive/cream, "linked recipe", "screenshot", "text note") arrow-transitioning into a single tidy `paper-card` list. No mascot art in the middle. Head sticker can sit small at the corner.
+## 2. Routes (TanStack file routing under `src/routes/`)
 
-**`HowItWorks.tsx`** — All four cards currently show cropped character-sheet cells (circled). Replace each square panel with a **coded product vignette** matching the step, not a mascot portrait:
-- 01 Capture: a small "paste a link" input row + parsed recipe chip
-- 02 Kitchen: 3 inventory rows with Good / Running low / Out chips (matches Meal Planning right panel style)
-- 03 Deck: a mini stacked-cards preview (reuse TonightsDeck card styles at small size)
-- 04 Plan/Shop: mini 7-day strip with 2 slots filled + a "3 items to buy" chip
-Add a small head sticker (real asset) in each corner as a signature, not as the main visual.
+Preserved: `index.tsx` (landing).
 
-**`TonightsDeck.tsx`** — The card visual is fine structurally, but the "Simi peeking" crop is broken. Swap to the fullbody sticker peeking from behind the top card at a small size and rotation. Keep dark cocoa panel, stacked cards, swipe icons.
+New public:
+- `login.tsx`, `signup.tsx`, `forgot-password.tsx`, `reset-password.tsx`, `auth.callback.tsx`.
 
-**`Planning.tsx`** — The "This week" panel and Kitchen panel are already coded UI and look correct — preserve them. Only the tiny Simi helper thumbnail inside the "3 items to buy" note is a bad crop; swap to the head sticker at ~40px. No layout change.
+New protected under `_authenticated/`:
+- `_authenticated/route.tsx` — `ssr: false` gate, redirects to `/login` if no session (integration-managed pattern).
+- `_authenticated/app.index.tsx` → `/app` (dashboard).
+- `_authenticated/app.recipes.index.tsx` → `/app/recipes`.
+- `_authenticated/app.recipes.new.tsx` → `/app/recipes/new`.
+- `_authenticated/app.recipes.$recipeId.index.tsx` → `/app/recipes/:recipeId`.
+- `_authenticated/app.recipes.$recipeId.edit.tsx` → `/app/recipes/:recipeId/edit`.
+- `_authenticated/app.kitchen.tsx` → `/app/kitchen`.
+- `_authenticated/app.settings.tsx` → `/app/settings`.
 
-**`Trust.tsx`** — The big left panel currently shows a random slice of the usage sheet (circled). Replace with a coded "privacy card": a small phone-frame mock (reuse styles) showing a lock chip, an "Export data" button row, and one Simi head sticker in the corner. No character-sheet crops.
+Landing "Log in" CTA points to `/login`. Register `attachSupabaseAuth` in `src/start.ts` (append; don't replace existing middleware).
 
-**`FinalCTA.tsx` / `EarlyAccessForm.tsx`** — Replace the mascot art with `simi-fullbody`; keep form logic, success/error states, Cloud insert. State icons switch to the head sticker.
+## 3. Data access
 
-**`Footer.tsx`** — Swap cropped "sleepy Simi" for the head sticker at 24px next to the wordmark.
+All reads/writes use the browser `supabase` client with RLS — no server functions needed for MVP. TanStack Query for cache; each mutation invalidates the relevant keys. `useAuth` hook wraps `supabase.auth` with `onAuthStateChange` in `__root.tsx` invalidating router + queries on identity transitions.
 
-**Pricing** — Not currently in the page. Out of scope for this pass unless the user wants it added; call it out at the end.
+## 4. Readiness engine (`src/lib/readiness.ts`)
 
-### Preserve unchanged
-`Journey.tsx`, `Features.tsx` (bento), `UseCases.tsx`, `Benefits.tsx`, `WhoFor.tsx`, `FAQ.tsx`, `src/routes/index.tsx`, `src/styles.css`, `src/routes/__root.tsx`, and the `early_access_signups` migration.
+Pure function `computeReadiness(ingredients, kitchenItems) → { label, explanation }`. Normalize names with `lower(trim())`. Rules per spec:
 
-### Cleanup after swap
-Delete `src/assets/simi-sheet.png.asset.json` and `src/assets/simi-usage.png.asset.json` (and their CDN objects via `lovable-assets delete`) once no component references them. `simi-hero` gets retired in favor of `simi-fullbody`.
+```text
+missing core          → not_ready
+else missing support  → needs_shopping
+else any unknown      → check_first
+else any running_low  → almost_ready
+else                  → ready_to_cook
+optional              → ignored as blocker
+```
 
-### Out of scope
-- Pricing section (not built yet — flag for a follow-up).
-- Any copy/section-order changes.
-- Auth / real product screens.
+Explanation groups: available / running low / needs check / missing core / missing supporting / ignored optional. Consumed by Recipe Detail, My Recipes cards, Dashboard aggregates.
+
+## 5. App shell
+
+`AppShell` component: desktop sidebar (Home, My Recipes, Add Recipe, Kitchen, Settings) + top bar with profile menu (display name, logout). Mobile: top bar + bottom nav. Uses existing brand tokens and shadcn primitives. No marketing illustrations.
+
+## 6. Screens
+
+- **Dashboard** — real counts (active recipes, kitchen items, ready-to-cook, almost-ready), recent recipes list, quick actions. Real empty state.
+- **My Recipes** — grid/list of cards (title, times, servings, readiness chip + short reason, edit/archive). Search input (client filter), archived toggle. Empty/loading/error states.
+- **Add / Edit Recipe** — RHF + Zod. Ingredient rows (raw_text, display_name, quantity_text, unit, prep note, importance select, drag/keyboard reorder via up/down buttons). Step rows (instruction, reorder). Save writes recipe + replaces ingredient/step rows atomically per submit.
+- **Recipe Detail** — full render, ingredients grouped by importance, steps ordered, readiness result + explanation, edit/archive/delete (delete uses AlertDialog).
+- **Kitchen** — table/list of items with inline status/location edit, add-item dialog, search, filter by status/location, archive/remove.
+- **Settings** — display name, language, measurement system, timezone; sign out; delete-account note (out of scope button disabled with tooltip).
+
+All screens: loading skeletons, empty states, toast feedback via existing Sonner, validation errors inline, retry buttons on server errors, focus rings, labels, keyboard reorder, ≥44px touch targets.
+
+## 7. Auth flow
+
+Supabase email/password. `signUp` with `emailRedirectTo = ${origin}/auth/callback`. `/reset-password` public route calls `updateUser({ password })` after Supabase recovery link. `_authenticated/route.tsx` calls `supabase.auth.getUser()` in `beforeLoad` (client-only) and redirects to `/login?redirect=…` when unauthenticated. Sign-out: cancel queries → clear cache → `signOut()` → `navigate('/login', { replace: true })`.
+
+## 8. Preserved
+
+Landing `/` and all `src/components/landing/*`, navbar, footer, early-access form, mascot/food assets, `vercel.json`, Nitro `vercel` preset, Node engines, existing `.env.example`.
+
+## 9. Out of scope (not built)
+
+URL/AI import, OCR, media upload, Cooking History, Tonight's Deck, Meal Planning, Shopping List, community, freemium/billing, admin.
+
+## 10. Validation before reporting
+
+`npm run build` (Nitro vercel output), `tsgo` typecheck, spot-check routes via preview, verify RLS by logging in as user A then querying user B's row (should return empty), confirm landing untouched.
+
+## 11. Deliverables at end
+
+Files changed, routes added, migration SQL summary, tables + RLS policies list, real features verified, remaining manual config (Supabase Auth redirect URLs for prod + preview in dashboard — but on Lovable Cloud this is managed; note it), build/typecheck output, known limitations, redeploy steps (push to GitHub → Vercel auto-build; env vars already present via Lovable Cloud injection).
+
+## Technical notes
+
+- Denormalized `user_id` on `recipe_ingredients` / `recipe_steps` lets RLS use `auth.uid() = user_id` directly instead of joining to `recipes` — faster policies and simpler grants.
+- All CRUD goes through the browser Supabase client under RLS; no service-role key usage.
+- `_authenticated` layout uses `ssr: false` because Supabase session lives in localStorage.
+- Migration is a single call; all `CREATE TABLE` followed by GRANT → RLS → policies as required.
