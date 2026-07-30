@@ -1,9 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getRecipeDetail, archiveRecipe, unarchiveRecipe, deleteRecipe } from "@/lib/api";
+import {
+  getRecipeDetail,
+  archiveRecipe,
+  unarchiveRecipe,
+  deleteRecipe,
+  listCollections,
+  listCollectionIdsForRecipe,
+} from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
 import { shouldShowSourceLink, safeHostname } from "@/lib/url-safety";
+import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
+import { CoverPhotoUploader } from "@/components/app/CoverPhotoUploader";
+import { CollectionPicker } from "@/components/app/CollectionPicker";
 import { toast } from "sonner";
 import {
   ChevronLeft,
@@ -14,6 +24,7 @@ import {
   Clock,
   Users,
   ExternalLink,
+  FolderOpen,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -27,6 +38,19 @@ function RecipeDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showCollectionPicker, setShowCollectionPicker] = useState(false);
+
+  const collectionsQuery = useQuery({
+    queryKey: ["collections", true],
+    queryFn: () => listCollections(true),
+  });
+  const membershipQuery = useQuery({
+    queryKey: ["collection-memberships", recipeId],
+    queryFn: () => listCollectionIdsForRecipe(recipeId),
+  });
+  const memberCollections = (collectionsQuery.data ?? []).filter((c) =>
+    (membershipQuery.data ?? []).includes(c.id),
+  );
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["recipe", recipeId],
@@ -101,6 +125,19 @@ function RecipeDetail() {
       <Link to="/app/recipes" className="mb-3 inline-flex items-center gap-1 text-sm text-cocoa hover:underline">
         <ChevronLeft className="h-4 w-4" /> Back to recipes
       </Link>
+
+      <div className="mb-3 overflow-hidden rounded-3xl border border-border/70">
+        <RecipeCoverImage
+          bucket={recipe.cover_storage_bucket}
+          path={recipe.cover_storage_path}
+          alt={`${recipe.title} cover photo`}
+          className="aspect-[16/9] w-full"
+        />
+      </div>
+      <div className="mb-6">
+        <CoverPhotoUploader recipe={recipe} />
+      </div>
+
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold text-olive-deep">{recipe.title}</h1>
@@ -166,6 +203,42 @@ function RecipeDetail() {
             <ExternalLink className="h-3.5 w-3.5" /> View original recipe
           </a>
         </section>
+      )}
+
+      <section className="mb-6 rounded-3xl border border-border/70 bg-background p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-xl font-semibold text-olive-deep">Collections</h2>
+          <button
+            type="button"
+            onClick={() => setShowCollectionPicker(true)}
+            className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs text-cocoa hover:bg-cream-deep/40"
+          >
+            <FolderOpen className="h-3 w-3" />
+            {memberCollections.length > 0 ? "Manage" : "Add to collections"}
+          </button>
+        </div>
+        {memberCollections.length === 0 ? (
+          <p className="text-sm text-cocoa/60">Not in any collection yet.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {memberCollections.map((c) => (
+              <li key={c.id}>
+                <Link
+                  to="/app/collections/$collectionId"
+                  params={{ collectionId: c.id }}
+                  className="inline-flex items-center rounded-full border border-border px-3 py-1 text-xs text-cocoa hover:bg-cream-deep/40"
+                >
+                  {c.name}
+                  {c.archived_at ? " (archived)" : ""}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {showCollectionPicker && (
+        <CollectionPicker recipeId={recipeId} onClose={() => setShowCollectionPicker(false)} />
       )}
 
       <section className={`mb-6 rounded-3xl border p-5 ${readinessTone(readiness.label)}`}>

@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
-import { archiveRecipe, unarchiveRecipe } from "@/lib/api";
+import { archiveRecipe, unarchiveRecipe, listCollections } from "@/lib/api";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore, Clock, Users, Pencil, Plus, Search, Import } from "lucide-react";
+import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
 
 export const Route = createFileRoute("/_authenticated/app/recipes/")({
   head: () => ({ meta: [{ title: "My Recipes — Simmeri" }] }),
@@ -45,15 +46,39 @@ function useRecipesWithReadiness(includeArchived: boolean) {
 function RecipesList() {
   const [q, setQ] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [collectionFilter, setCollectionFilter] = useState<string>("all");
   const { data, isLoading, error } = useRecipesWithReadiness(showArchived);
   const qc = useQueryClient();
+
+  const collectionsQuery = useQuery({
+    queryKey: ["collections", false],
+    queryFn: () => listCollections(false),
+  });
+
+  const collectionMembersQuery = useQuery({
+    queryKey: ["collection-member-ids", collectionFilter],
+    queryFn: async () => {
+      const { data: memberships, error: membershipError } = await supabase
+        .from("collection_recipes")
+        .select("recipe_id")
+        .eq("collection_id", collectionFilter);
+      if (membershipError) throw membershipError;
+      return new Set((memberships ?? []).map((m) => m.recipe_id));
+    },
+    enabled: collectionFilter !== "all",
+  });
 
   const filtered = useMemo(() => {
     if (!data) return [];
     const needle = q.trim().toLowerCase();
-    if (!needle) return data;
-    return data.filter(({ recipe }) => recipe.title.toLowerCase().includes(needle));
-  }, [data, q]);
+    let result = data;
+    if (needle) result = result.filter(({ recipe }) => recipe.title.toLowerCase().includes(needle));
+    if (collectionFilter !== "all") {
+      const memberIds = collectionMembersQuery.data;
+      result = memberIds ? result.filter(({ recipe }) => memberIds.has(recipe.id)) : [];
+    }
+    return result;
+  }, [data, q, collectionFilter, collectionMembersQuery.data]);
 
   const archiveMut = useMutation({
     mutationFn: async (id: string) => archiveRecipe(id),
@@ -113,6 +138,19 @@ function RecipesList() {
           />
           Show archived
         </label>
+        <select
+          value={collectionFilter}
+          onChange={(e) => setCollectionFilter(e.target.value)}
+          aria-label="Filter by collection"
+          className="rounded-full border border-border bg-background px-3 py-2 text-sm text-cocoa focus:outline-none focus:ring-2 focus:ring-olive-deep/40"
+        >
+          <option value="all">All collections</option>
+          {(collectionsQuery.data ?? []).map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {isLoading && <div className="text-cocoa/70">Loading…</div>}
@@ -148,6 +186,12 @@ function RecipesList() {
               params={{ recipeId: recipe.id }}
               className="block"
             >
+              <RecipeCoverImage
+                bucket={recipe.cover_storage_bucket}
+                path={recipe.cover_storage_path}
+                alt={`${recipe.title} cover photo`}
+                className="mb-3 aspect-[4/3] w-full rounded-xl"
+              />
               <h3 className="font-display text-lg font-semibold text-cocoa">{recipe.title}</h3>
               {recipe.description && (
                 <p className="mt-1 line-clamp-2 text-sm text-cocoa/70">{recipe.description}</p>

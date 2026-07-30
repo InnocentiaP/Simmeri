@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
 import { BookOpen, Plus, Refrigerator, ChefHat } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Home — Simmeri" }] }),
@@ -93,18 +94,26 @@ function Dashboard() {
                   <Link
                     to="/app/recipes/$recipeId"
                     params={{ recipeId: r.id }}
-                    className="block rounded-2xl border border-border/70 bg-background p-4 transition hover:shadow-[var(--shadow-soft)]"
+                    className="flex gap-3 rounded-2xl border border-border/70 bg-background p-4 transition hover:shadow-[var(--shadow-soft)]"
                   >
-                    <h3 className="font-display text-lg font-semibold text-cocoa">{r.title}</h3>
-                    {r.description && <p className="mt-1 line-clamp-2 text-sm text-cocoa/70">{r.description}</p>}
-                    {rd && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <span className={`rounded-full border px-2.5 py-1 text-xs ${readinessTone(rd.label)}`}>
-                          {readinessDisplay(rd.label)}
-                        </span>
-                        <span className="text-xs text-cocoa/60">{rd.short}</span>
-                      </div>
-                    )}
+                    <RecipeCoverImage
+                      bucket={r.cover_storage_bucket}
+                      path={r.cover_storage_path}
+                      alt={`${r.title} cover photo`}
+                      className="h-16 w-16 shrink-0 rounded-xl"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-display text-lg font-semibold text-cocoa">{r.title}</h3>
+                      {r.description && <p className="mt-1 line-clamp-2 text-sm text-cocoa/70">{r.description}</p>}
+                      {rd && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className={`rounded-full border px-2.5 py-1 text-xs ${readinessTone(rd.label)}`}>
+                            {readinessDisplay(rd.label)}
+                          </span>
+                          <span className="text-xs text-cocoa/60">{rd.short}</span>
+                        </div>
+                      )}
+                    </div>
                   </Link>
                 </li>
               );
