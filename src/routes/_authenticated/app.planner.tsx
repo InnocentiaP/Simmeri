@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, ShoppingCart } from "lucide-react";
 import {
   listMealPlanEntriesInRange,
   listRecipesByIds,
@@ -30,6 +30,13 @@ import { MealPlanEntryForm } from "@/components/app/MealPlanEntryForm";
 import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
 import { MealPlanDayView } from "@/components/app/MealPlanDayView";
 import { MealPlanWeekView } from "@/components/app/MealPlanWeekView";
+import { ShoppingGenerationReview } from "@/components/app/ShoppingGenerationReview";
+import {
+  generateCandidates,
+  toGenerationIngredients,
+  buildPlannerEntryContext,
+  type GeneratedCandidateItem,
+} from "@/lib/shopping-generate";
 
 const searchSchema = z.object({
   view: z.enum(["day", "week"]).optional().default("day"),
@@ -68,6 +75,7 @@ function PlannerPage() {
   const [entryForm, setEntryForm] = useState<EntryFormState | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<MealPlanEntry | null>(null);
   const [cookingEntry, setCookingEntry] = useState<MealPlanEntry | null>(null);
+  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(null);
 
   const { start, end } =
     view === "week" ? getWeekRange(anchorDate, 1) : { start: anchorDate, end: anchorDate };
@@ -189,6 +197,33 @@ function PlannerPage() {
     onRemove: (entry: MealPlanEntry) => setConfirmRemove(entry),
   };
 
+  // "for this day"/"for this week" both use the same handler — entries is
+  // already scoped to whatever range the current view fetched (a single
+  // day, or the 7 visible days), so no extra filtering by date is needed
+  // here beyond excluding entries that aren't in the actionable "planned"
+  // state (skipped/cooked/cancelled entries have nothing left to shop for).
+  function handleGeneratePreview() {
+    const sources = entries
+      .filter((e) => e.status === "planned")
+      .map((entry) => {
+        const recipe = recipesById.get(entry.recipe_id);
+        if (!recipe) return null;
+        const ingredientsForRecipe = (ingredientsQuery.data ?? []).filter(
+          (i) => i.recipe_id === entry.recipe_id,
+        );
+        return {
+          context: buildPlannerEntryContext(entry, {
+            id: recipe.id,
+            title: recipe.title,
+            servings: recipe.servings,
+          }),
+          ingredients: toGenerationIngredients(ingredientsForRecipe),
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    setGeneratedCandidates(generateCandidates(sources, kitchenQuery.data ?? []));
+  }
+
   const isLoading = entriesQuery.isLoading || (recipeIds.length > 0 && (recipesQuery.isLoading || ingredientsQuery.isLoading));
   const hasError = Boolean(entriesQuery.error || recipesQuery.error || ingredientsQuery.error || kitchenQuery.error);
 
@@ -242,6 +277,15 @@ function PlannerPage() {
             className="rounded-full border border-border p-2 text-cocoa hover:bg-cream-deep/40"
           >
             <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleGeneratePreview}
+            disabled={entries.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/40 disabled:opacity-60"
+          >
+            <ShoppingCart className="h-3.5 w-3.5" />
+            {view === "week" ? "Generate shopping preview for this week" : "Generate shopping preview for this day"}
           </button>
         </div>
       </header>
@@ -314,6 +358,13 @@ function PlannerPage() {
             if (entry) cookMut.mutate(entry);
           }}
           onClose={() => setCookingEntry(null)}
+        />
+      )}
+
+      {generatedCandidates && (
+        <ShoppingGenerationReview
+          candidates={generatedCandidates}
+          onClose={() => setGeneratedCandidates(null)}
         />
       )}
 

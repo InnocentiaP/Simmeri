@@ -3,10 +3,35 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
-import { archiveRecipe, unarchiveRecipe, listCollections } from "@/lib/api";
+import {
+  archiveRecipe,
+  unarchiveRecipe,
+  listCollections,
+  listRecipeIngredientsForRecipeIds,
+  listKitchenItems,
+} from "@/lib/api";
 import { toast } from "sonner";
-import { Archive, ArchiveRestore, Clock, Users, Pencil, Plus, Search, Import } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Clock,
+  Users,
+  Pencil,
+  Plus,
+  Search,
+  Import,
+  ListChecks,
+  ShoppingCart,
+  X,
+} from "lucide-react";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
+import { ShoppingGenerationReview } from "@/components/app/ShoppingGenerationReview";
+import {
+  generateCandidates,
+  toGenerationIngredients,
+  buildDirectRecipeContext,
+  type GeneratedCandidateItem,
+} from "@/lib/shopping-generate";
 
 export const Route = createFileRoute("/_authenticated/app/recipes/")({
   head: () => ({ meta: [{ title: "My Recipes — Simmeri" }] }),
@@ -47,8 +72,49 @@ function RecipesList() {
   const [q, setQ] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [collectionFilter, setCollectionFilter] = useState<string>("all");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(null);
   const { data, isLoading, error } = useRecipesWithReadiness(showArchived);
   const qc = useQueryClient();
+
+  function toggleSelected(recipeId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(recipeId)) next.delete(recipeId);
+      else next.add(recipeId);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
+  const generatePreviewMut = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selectedIds);
+      const [ingredients, kitchen] = await Promise.all([
+        listRecipeIngredientsForRecipeIds(ids),
+        listKitchenItems(false),
+      ]);
+      const recipesById = new Map((data ?? []).map(({ recipe }) => [recipe.id, recipe]));
+      const sources = ids
+        .map((id) => {
+          const recipe = recipesById.get(id);
+          if (!recipe) return null;
+          return {
+            context: buildDirectRecipeContext({ id: recipe.id, title: recipe.title, servings: recipe.servings }),
+            ingredients: toGenerationIngredients(ingredients.filter((i) => i.recipe_id === id)),
+          };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null);
+      return generateCandidates(sources, kitchen);
+    },
+    onSuccess: (generated) => setGeneratedCandidates(generated),
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const collectionsQuery = useQuery({
     queryKey: ["collections", false],
@@ -104,19 +170,51 @@ function RecipesList() {
           <h1 className="font-display text-3xl font-semibold text-olive-deep">My Recipes</h1>
           <p className="text-sm text-cocoa/70">Everything you've saved and cooked.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/app/recipes/import"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-cocoa hover:bg-cream-deep/40"
-          >
-            <Import className="h-4 w-4" /> Import
-          </Link>
-          <Link
-            to="/app/recipes/new"
-            className="inline-flex items-center gap-1.5 rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-olive"
-          >
-            <Plus className="h-4 w-4" /> Add recipe
-          </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {selectMode ? (
+            <>
+              <button
+                type="button"
+                disabled={selectedIds.size === 0 || generatePreviewMut.isPending}
+                onClick={() => generatePreviewMut.mutate()}
+                className="inline-flex items-center gap-1.5 rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-olive disabled:opacity-60"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                {generatePreviewMut.isPending
+                  ? "Preparing…"
+                  : `Generate shopping list (${selectedIds.size})`}
+              </button>
+              <button
+                type="button"
+                onClick={exitSelectMode}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm text-cocoa hover:bg-cream-deep/40"
+              >
+                <X className="h-4 w-4" /> Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setSelectMode(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-cocoa hover:bg-cream-deep/40"
+              >
+                <ListChecks className="h-4 w-4" /> Select recipes
+              </button>
+              <Link
+                to="/app/recipes/import"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-cocoa hover:bg-cream-deep/40"
+              >
+                <Import className="h-4 w-4" /> Import
+              </Link>
+              <Link
+                to="/app/recipes/new"
+                className="inline-flex items-center gap-1.5 rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-olive"
+              >
+                <Plus className="h-4 w-4" /> Add recipe
+              </Link>
+            </>
+          )}
         </div>
       </header>
 
@@ -179,8 +277,19 @@ function RecipesList() {
         {filtered.map(({ recipe, readiness }) => (
           <li
             key={recipe.id}
-            className="flex flex-col rounded-2xl border border-border/70 bg-background p-4"
+            className="relative flex flex-col rounded-2xl border border-border/70 bg-background p-4"
           >
+            {selectMode && (
+              <label className="absolute left-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background/95 shadow-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(recipe.id)}
+                  onChange={() => toggleSelected(recipe.id)}
+                  aria-label={`Select ${recipe.title}`}
+                  className="h-4 w-4"
+                />
+              </label>
+            )}
             <Link
               to="/app/recipes/$recipeId"
               params={{ recipeId: recipe.id }}
@@ -245,6 +354,16 @@ function RecipesList() {
           </li>
         ))}
       </ul>
+
+      {generatedCandidates && (
+        <ShoppingGenerationReview
+          candidates={generatedCandidates}
+          onClose={() => {
+            setGeneratedCandidates(null);
+            exitSelectMode();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -41,26 +41,66 @@ export interface ReadinessResult {
 
 const norm = (s: string) => s.trim().toLowerCase();
 
-export function computeReadiness(
-  ingredients: ReadinessIngredient[],
-  kitchenItems: ReadinessKitchenItem[],
-): ReadinessResult {
-  const activeKitchen = kitchenItems.filter((k) => !k.archived_at);
+// Generic ingredient-presence classification, independent of importance —
+// this is the reuse point for Shopping Generation (Wave 2 Checkpoint 3),
+// which needs the same Kitchen-matching logic but not the readiness-label
+// bucketing below. Extracted additively: computeReadiness's own behavior
+// and labels are unchanged (see the regression tests in readiness.test.ts).
+export type IngredientPresence = "available" | "running_low" | "needs_check" | "missing";
+
+const KITCHEN_STATUS_PRIORITY: Record<KitchenStatus, number> = {
+  unknown: 4,
+  out_of_stock: 3,
+  running_low: 2,
+  available: 1,
+};
+
+// Reduces (possibly duplicate) active Kitchen rows to one highest-priority
+// status per normalized ingredient name — e.g. if two active rows somehow
+// share a normalized name with different statuses, "unknown" wins over
+// "out_of_stock" wins over "running_low" wins over "available", since an
+// uncertain/missing signal should never be silently shadowed by a more
+// optimistic duplicate. Callers are expected to have already filtered out
+// archived rows (computeReadiness does this before calling in).
+export function buildKitchenPresenceIndex(
+  activeKitchenItems: ReadinessKitchenItem[],
+): Map<string, KitchenStatus> {
   const byName = new Map<string, KitchenStatus>();
-  const priority: Record<KitchenStatus, number> = {
-    unknown: 4,
-    out_of_stock: 3,
-    running_low: 2,
-    available: 1,
-  };
-  for (const k of activeKitchen) {
+  for (const k of activeKitchenItems) {
     const key = k.normalized_name ?? norm(k.ingredient_name);
     const status = (["available", "running_low", "out_of_stock", "unknown"].includes(k.status)
       ? k.status
       : "unknown") as KitchenStatus;
     const prev = byName.get(key);
-    if (!prev || priority[status] > priority[prev]) byName.set(key, status);
+    if (!prev || KITCHEN_STATUS_PRIORITY[status] > KITCHEN_STATUS_PRIORITY[prev]) {
+      byName.set(key, status);
+    }
   }
+  return byName;
+}
+
+// Classifies one ingredient's presence against an index already built by
+// buildKitchenPresenceIndex. No matching Kitchen row, or an out_of_stock
+// row, is "missing"; "unknown" is "needs_check" (never silently treated as
+// definitely missing); "running_low" stays "running_low"; anything else
+// resolves to "available".
+export function classifyIngredientPresence(
+  displayName: string,
+  presenceIndex: Map<string, KitchenStatus>,
+): IngredientPresence {
+  const status = presenceIndex.get(norm(displayName));
+  if (!status || status === "out_of_stock") return "missing";
+  if (status === "unknown") return "needs_check";
+  if (status === "running_low") return "running_low";
+  return "available";
+}
+
+export function computeReadiness(
+  ingredients: ReadinessIngredient[],
+  kitchenItems: ReadinessKitchenItem[],
+): ReadinessResult {
+  const activeKitchen = kitchenItems.filter((k) => !k.archived_at);
+  const byName = buildKitchenPresenceIndex(activeKitchen);
 
   const exp: ReadinessExplanation = {
     available: [],
@@ -78,15 +118,15 @@ export function computeReadiness(
       exp.ignored_optional.push(name);
       continue;
     }
-    const status = byName.get(norm(name));
-    if (!status || status === "out_of_stock") {
+    const presence = classifyIngredientPresence(name, byName);
+    if (presence === "missing") {
       if (ing.importance === "core") exp.missing_core.push(name);
       else if (ing.importance === "seasoning") exp.missing_seasoning.push(name);
       else exp.missing_supporting.push(name);
       continue;
     }
-    if (status === "unknown") exp.needs_check.push(name);
-    else if (status === "running_low") exp.running_low.push(name);
+    if (presence === "needs_check") exp.needs_check.push(name);
+    else if (presence === "running_low") exp.running_low.push(name);
     else exp.available.push(name);
   }
 

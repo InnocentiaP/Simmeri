@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
+import type { GenerationPayloadItem } from "@/lib/shopping-generate";
 
 export type Recipe = Database["public"]["Tables"]["recipes"]["Row"];
 export type RecipeIngredient = Database["public"]["Tables"]["recipe_ingredients"]["Row"];
@@ -734,4 +735,41 @@ export async function updateKitchenItem(id: string, patch: KitchenItemUpdatePatc
   if (patch.storageLocation !== undefined) payload.storage_location = patch.storageLocation;
   const { error } = await supabase.from("kitchen_items").update(payload).eq("id", id);
   if (error) throw error;
+}
+
+export type ShoppingItemSource = Database["public"]["Tables"]["shopping_item_sources"]["Row"];
+
+// Batched lookup across every item in one list (used by both duplicate-
+// generation detection and the "Needed for" provenance display on Shopping
+// List Detail) — two plain queries (this one, plus the already-existing
+// listShoppingListItems for the item ids) rather than a PostgREST embedded
+// join, matching the existing two-query pattern used throughout this file
+// (e.g. listRecipesInCollection).
+export async function listShoppingItemSourcesForItems(
+  shoppingListItemIds: string[],
+): Promise<ShoppingItemSource[]> {
+  if (shoppingListItemIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("shopping_item_sources")
+    .select("*")
+    .in("shopping_list_item_id", shoppingListItemIds);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Calls the one transactional RPC in this checkpoint — every merge/quantity
+// decision has already been made client-side by the pure shopping-merge/
+// shopping-generate modules; this only executes the already-decided,
+// already-approved payload atomically. Returns the newly created
+// shopping_list_items ids.
+export async function generateShoppingListItems(
+  shoppingListId: string,
+  items: GenerationPayloadItem[],
+): Promise<string[]> {
+  const { data, error } = await supabase.rpc("generate_shopping_list_items", {
+    p_shopping_list_id: shoppingListId,
+    p_items: items as unknown as Json,
+  });
+  if (error) throw error;
+  return data ?? [];
 }

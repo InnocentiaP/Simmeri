@@ -399,6 +399,45 @@ export type Database = {
         }
         Relationships: []
       }
+      shopping_item_sources: {
+        Row: {
+          created_at: string
+          id: string
+          meal_plan_entry_id: string | null
+          meal_type_snapshot: string | null
+          planned_date_snapshot: string | null
+          raw_quantity_text: string | null
+          recipe_id: string | null
+          recipe_title_snapshot: string
+          shopping_list_item_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meal_plan_entry_id?: string | null
+          meal_type_snapshot?: string | null
+          planned_date_snapshot?: string | null
+          raw_quantity_text?: string | null
+          recipe_id?: string | null
+          recipe_title_snapshot: string
+          shopping_list_item_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meal_plan_entry_id?: string | null
+          meal_type_snapshot?: string | null
+          planned_date_snapshot?: string | null
+          raw_quantity_text?: string | null
+          recipe_id?: string | null
+          recipe_title_snapshot?: string
+          shopping_list_item_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       shopping_list_items: {
         Row: {
           created_at: string
@@ -503,6 +542,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_shopping_list_items: {
+        Args: {
+          p_shopping_list_id: string
+          p_items: Json
+        }
+        Returns: string[]
+      }
       save_recipe_with_details: {
         Args: {
           p_recipe_id: string | null
