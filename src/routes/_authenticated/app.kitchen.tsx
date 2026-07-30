@@ -213,7 +213,11 @@ function Kitchen() {
 
       {filtered.length > 0 && (
         <div className="overflow-hidden rounded-3xl border border-border/70 bg-background">
-          <table className="w-full text-sm">
+          {/* Inner overflow-x-auto lets the table scroll horizontally on
+              narrow viewports instead of squeezing/clipping columns —
+              min-w keeps every column readable while scrolling. */}
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-cream-deep/40 text-left text-xs uppercase tracking-wide text-cocoa/70">
               <tr>
                 <th className="px-4 py-3">Ingredient</th>
@@ -326,6 +330,7 @@ function Kitchen() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -68,6 +68,11 @@ function ResetPage() {
           {loading ? "Saving…" : "Update password"}
         </button>
       </form>
+      <p className="mt-5 text-sm">
+        <Link to="/login" className="text-cocoa hover:underline">
+          Back to sign in
+        </Link>
+      </p>
     </AuthLayout>
   );
 }
