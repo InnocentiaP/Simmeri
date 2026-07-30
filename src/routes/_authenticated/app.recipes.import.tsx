@@ -25,7 +25,7 @@ type Step =
   | { kind: "error"; message: string };
 
 function ImportRecipe() {
-  const [mode, setMode] = useState<SourceMode>("paste");
+  const [mode, setMode] = useState<SourceMode>("url");
   const [pasteText, setPasteText] = useState("");
   const [url, setUrl] = useState("");
   const [step, setStep] = useState<Step>({ kind: "input" });
@@ -73,8 +73,9 @@ function ImportRecipe() {
       </Link>
       <h1 className="mb-2 font-display text-3xl font-semibold text-olive-deep">Import a recipe</h1>
       <p className="mb-6 text-sm text-cocoa/70">
-        Paste recipe text, or link to a public recipe page. You'll review and edit everything
-        before it's saved.
+        {mode === "url"
+          ? "Import from a public recipe webpage — paste the link below. You'll review and edit everything before it's saved."
+          : "Paste the recipe's text below. You'll review and edit everything before it's saved."}
       </p>
 
       <div className="mb-4 inline-flex rounded-full border border-border bg-background p-1">
@@ -117,13 +118,18 @@ function ImportRecipe() {
           </p>
         </div>
       ) : (
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          type="url"
-          placeholder="https://example.com/a-recipe"
-          className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
-        />
+        <div>
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            type="url"
+            placeholder="https://example.com/a-recipe"
+            className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
+          />
+          <p className="mt-1.5 text-xs text-cocoa/60">
+            Video and social-media links may not be supported yet. Paste the recipe text instead.
+          </p>
+        </div>
       )}
 
       {step.kind === "error" && <p className="mt-3 text-sm text-terracotta">{step.message}</p>}
@@ -242,8 +248,8 @@ function ReviewStep({
             )}
             <p className="mt-1 text-xs text-cocoa/70">
               {aiApplied
-                ? "Review every field before saving — nothing is saved yet."
-                : "Improving with AI will replace the fields below with an AI-extracted draft — review before saving."}
+                ? "AI drafts can vary. Review every field before saving. Trying again will replace your current AI draft with a new attempt."
+                : "AI drafts can vary. Review every field before saving. Improving with AI will replace the fields below with an AI-extracted draft."}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -263,7 +269,7 @@ function ReviewStep({
               className="inline-flex items-center gap-1.5 rounded-full border border-olive-deep px-4 py-1.5 text-sm font-medium text-olive-deep hover:bg-olive-deep/10 disabled:opacity-60"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              {aiMut.isPending ? "Asking AI…" : "Improve with AI"}
+              {aiMut.isPending ? "Asking AI…" : aiApplied ? "Try AI again" : "Improve with AI"}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Plus, Pencil } from "lucide-react";
 import { formatDateKey, isToday } from "@/lib/date-range";
 import { readinessTone, type ReadinessResult } from "@/lib/readiness";
 import type { MealPlanEntry, Recipe } from "@/lib/api";
@@ -147,19 +148,46 @@ function DayColumn({
             const readiness = readinessById.get(entry.recipe_id);
             return (
               <li key={entry.id}>
-                <button
-                  type="button"
-                  onClick={() => onEdit(entry)}
-                  className="w-full rounded-lg border border-border/60 p-1.5 text-left text-xs hover:bg-cream-deep/40"
-                >
-                  <p className="truncate font-medium text-cocoa">{recipe?.title ?? "Recipe unavailable"}</p>
+                {/* Title is a Link (navigates to Recipe Detail); Edit is a
+                    sibling icon button, not a descendant — this avoids
+                    nesting an <a> inside a <button> (or vice versa), so no
+                    stopPropagation is needed and both stay independently
+                    keyboard-operable. Previously the whole card was one
+                    button that only opened Edit; that shortcut is preserved
+                    here via the dedicated pencil icon. */}
+                <div className="rounded-lg border border-border/60 p-1.5 text-xs hover:bg-cream-deep/40">
+                  <div className="flex items-start justify-between gap-1">
+                    {recipe ? (
+                      <Link
+                        to="/app/recipes/$recipeId"
+                        params={{ recipeId: entry.recipe_id }}
+                        aria-label={`View recipe: ${recipe.title}`}
+                        className="min-w-0 flex-1 truncate rounded font-medium text-cocoa hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-olive-deep"
+                      >
+                        {recipe.title}
+                      </Link>
+                    ) : (
+                      <span className="min-w-0 flex-1 truncate font-medium text-cocoa/50">
+                        Recipe unavailable
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onEdit(entry)}
+                      aria-label="Move or edit this entry"
+                      title="Move / edit"
+                      className="shrink-0 rounded p-0.5 text-cocoa/50 hover:bg-cream-deep/60 hover:text-cocoa focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-olive-deep"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
                   <p className="mt-0.5 text-cocoa/50 capitalize">{entry.meal_type}</p>
                   {readiness && (
                     <span className={`mt-1 inline-block rounded-full border px-1.5 py-0.5 ${readinessTone(readiness.label)}`}>
                       {readiness.label === "ready_to_cook" ? "Ready" : readiness.label.replace(/_/g, " ")}
                     </span>
                   )}
-                </button>
+                </div>
               </li>
             );
           })}

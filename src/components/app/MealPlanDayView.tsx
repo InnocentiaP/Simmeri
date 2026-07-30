@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Plus, Pencil, Copy, SkipForward, ChefHat, Trash2 } from "lucide-react";
 import { MEAL_SLOT_ORDER, formatDateKey, type MealSlot } from "@/lib/date-range";
 import { readinessDisplay, readinessTone, type ReadinessResult } from "@/lib/readiness";
@@ -114,8 +115,15 @@ export function MealPlanEntryRow({
   onRemove,
 }: MealPlanEntryRowProps) {
   const isTerminal = entry.status === "cooked" || entry.status === "skipped" || entry.status === "cancelled";
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/60 p-2.5">
+
+  // Shared between the two branches below so the clickable ("View recipe")
+  // and non-clickable ("Recipe unavailable" — e.g. a deleted recipe a stale
+  // client-side row still references) states render identically apart from
+  // the wrapping element. Action buttons stay siblings of this block, never
+  // descendants of the Link, so there is no nested-interactive-element
+  // conflict and no stopPropagation is needed.
+  const info = (
+    <>
       <RecipeCoverImage
         bucket={recipe?.cover_storage_bucket ?? null}
         path={recipe?.cover_storage_path ?? null}
@@ -123,7 +131,7 @@ export function MealPlanEntryRow({
         className="h-12 w-12 shrink-0 rounded-lg"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-cocoa">
+        <p className={`truncate text-sm font-medium ${recipe ? "text-cocoa group-hover:underline" : "text-cocoa/50"}`}>
           {recipe?.title ?? "Recipe unavailable"}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-cocoa/60">
@@ -139,6 +147,23 @@ export function MealPlanEntryRow({
         </div>
         {entry.notes && <p className="mt-1 truncate text-xs text-cocoa/60">{entry.notes}</p>}
       </div>
+    </>
+  );
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border/60 p-2.5">
+      {recipe ? (
+        <Link
+          to="/app/recipes/$recipeId"
+          params={{ recipeId: entry.recipe_id }}
+          aria-label={`View recipe: ${recipe.title}`}
+          className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-olive-deep"
+        >
+          {info}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3">{info}</div>
+      )}
       <div className="flex shrink-0 items-center gap-1">
         {!isTerminal && (
           <>
