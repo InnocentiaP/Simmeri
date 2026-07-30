@@ -18,6 +18,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppKitchenRouteImport } from './routes/_authenticated/app.kitchen'
+import { Route as AuthenticatedAppPlannerRouteImport } from './routes/_authenticated/app.planner'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppCollectionsIndexRouteImport } from './routes/_authenticated/app.collections.index'
 import { Route as AuthenticatedAppCollectionsCollectionIdRouteImport } from './routes/_authenticated/app.collections.$collectionId'
@@ -69,6 +70,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
 const AuthenticatedAppKitchenRoute = AuthenticatedAppKitchenRouteImport.update({
   id: '/app/kitchen',
   path: '/app/kitchen',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppPlannerRoute = AuthenticatedAppPlannerRouteImport.update({
+  id: '/app/planner',
+  path: '/app/planner',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAppSettingsRoute =
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/app/kitchen': typeof AuthenticatedAppKitchenRoute
+  '/app/planner': typeof AuthenticatedAppPlannerRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/app/kitchen': typeof AuthenticatedAppKitchenRoute
+  '/app/planner': typeof AuthenticatedAppPlannerRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/app/kitchen': typeof AuthenticatedAppKitchenRoute
+  '/_authenticated/app/planner': typeof AuthenticatedAppPlannerRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/auth/callback'
     | '/app/kitchen'
+    | '/app/planner'
     | '/app/settings'
     | '/app/'
     | '/app/collections/$collectionId'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/auth/callback'
     | '/app/kitchen'
+    | '/app/planner'
     | '/app/settings'
     | '/app'
     | '/app/collections/$collectionId'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/auth/callback'
     | '/_authenticated/app/kitchen'
+    | '/_authenticated/app/planner'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/'
     | '/_authenticated/app/collections/$collectionId'
@@ -309,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppKitchenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app/planner': {
+      id: '/_authenticated/app/planner'
+      path: '/app/planner'
+      fullPath: '/app/planner'
+      preLoaderRoute: typeof AuthenticatedAppPlannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
       path: '/app/settings'
@@ -370,6 +389,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppKitchenRoute: typeof AuthenticatedAppKitchenRoute
+  AuthenticatedAppPlannerRoute: typeof AuthenticatedAppPlannerRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppCollectionsCollectionIdRoute: typeof AuthenticatedAppCollectionsCollectionIdRoute
@@ -383,6 +403,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppKitchenRoute: AuthenticatedAppKitchenRoute,
+  AuthenticatedAppPlannerRoute: AuthenticatedAppPlannerRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppCollectionsCollectionIdRoute:
