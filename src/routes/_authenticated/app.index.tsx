@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
-import { BookOpen, Plus, Refrigerator, ChefHat, CalendarDays } from "lucide-react";
+import { BookOpen, Plus, Refrigerator, ChefHat, CalendarDays, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
 import { formatDateKey, addDays } from "@/lib/date-range";
@@ -18,7 +18,7 @@ function useDashboardData() {
     queryFn: async () => {
       const todayKey = formatDateKey(new Date());
       const weekAheadKey = formatDateKey(addDays(new Date(), 6));
-      const [recipesRes, ingredientsRes, kitchenRes, mealPlanRes] = await Promise.all([
+      const [recipesRes, ingredientsRes, kitchenRes, mealPlanRes, shoppingCountRes] = await Promise.all([
         supabase.from("recipes").select("*").is("archived_at", null).order("created_at", { ascending: false }),
         supabase.from("recipe_ingredients").select("*"),
         supabase.from("kitchen_items").select("*").is("archived_at", null),
@@ -30,15 +30,21 @@ function useDashboardData() {
           .lte("planned_date", weekAheadKey)
           .order("planned_date", { ascending: true })
           .order("position", { ascending: true }),
+        supabase
+          .from("shopping_list_items")
+          .select("id", { count: "exact", head: true })
+          .eq("is_purchased", false),
       ]);
       if (recipesRes.error) throw recipesRes.error;
       if (ingredientsRes.error) throw ingredientsRes.error;
       if (kitchenRes.error) throw kitchenRes.error;
       if (mealPlanRes.error) throw mealPlanRes.error;
+      if (shoppingCountRes.error) throw shoppingCountRes.error;
       const recipes = recipesRes.data ?? [];
       const ingredients = ingredientsRes.data ?? [];
       const kitchen = kitchenRes.data ?? [];
       const mealPlanEntries = mealPlanRes.data ?? [];
+      const unpurchasedShoppingCount = shoppingCountRes.count ?? 0;
       const readinessByRecipe = new Map<string, ReturnType<typeof computeReadiness>>();
       for (const r of recipes) {
         const rIng = ingredients
@@ -53,7 +59,7 @@ function useDashboardData() {
       // Today has nothing planned — look ahead up to 6 more days for the
       // single next planned meal rather than showing a bare empty state.
       const nextMeal = todaysMeals.length === 0 ? (mealPlanEntries[0] ?? null) : null;
-      return { recipes, kitchen, readinessByRecipe, todaysMeals, nextMeal };
+      return { recipes, kitchen, readinessByRecipe, todaysMeals, nextMeal, unpurchasedShoppingCount };
     },
   });
 }
@@ -74,6 +80,7 @@ function Dashboard() {
   const recent = recipes.slice(0, 4);
   const todaysMeals = data?.todaysMeals ?? [];
   const nextMeal = data?.nextMeal ?? null;
+  const unpurchasedShoppingCount = data?.unpurchasedShoppingCount ?? 0;
   const recipeById = new Map(recipes.map((r) => [r.id, r]));
 
   return (
@@ -90,11 +97,17 @@ function Dashboard() {
         <Stat label="Almost ready" value={almost} tone="warm" />
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <QuickAction to="/app/recipes/new" icon={Plus} label="Add recipe" />
         <QuickAction to="/app/recipes" icon={BookOpen} label="My recipes" />
         <QuickAction to="/app/kitchen" icon={Refrigerator} label="Update kitchen" />
         <QuickAction to="/app/planner" icon={CalendarDays} label="Plan meals" />
+        <QuickAction
+          to="/app/shopping"
+          icon={ShoppingCart}
+          label="Open shopping list"
+          hint={unpurchasedShoppingCount > 0 ? `${unpurchasedShoppingCount} to buy` : undefined}
+        />
       </div>
 
       <section className="mt-10">
@@ -217,7 +230,17 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "re
   );
 }
 
-function QuickAction({ to, icon: Icon, label }: { to: string; icon: typeof Plus; label: string }) {
+function QuickAction({
+  to,
+  icon: Icon,
+  label,
+  hint,
+}: {
+  to: string;
+  icon: typeof Plus;
+  label: string;
+  hint?: string;
+}) {
   return (
     <Link
       to={to as any}
@@ -226,7 +249,10 @@ function QuickAction({ to, icon: Icon, label }: { to: string; icon: typeof Plus;
       <span className="flex h-10 w-10 items-center justify-center rounded-full bg-olive-deep/10 text-olive-deep">
         <Icon className="h-4 w-4" />
       </span>
-      <span className="text-sm font-medium text-cocoa">{label}</span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-cocoa">{label}</span>
+        {hint && <span className="block text-xs text-cocoa/60">{hint}</span>}
+      </span>
     </Link>
   );
 }

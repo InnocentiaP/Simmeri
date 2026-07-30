@@ -25,6 +25,8 @@ import { Route as AuthenticatedAppCollectionsCollectionIdRouteImport } from './r
 import { Route as AuthenticatedAppRecipesIndexRouteImport } from './routes/_authenticated/app.recipes.index'
 import { Route as AuthenticatedAppRecipesImportRouteImport } from './routes/_authenticated/app.recipes.import'
 import { Route as AuthenticatedAppRecipesNewRouteImport } from './routes/_authenticated/app.recipes.new'
+import { Route as AuthenticatedAppShoppingIndexRouteImport } from './routes/_authenticated/app.shopping.index'
+import { Route as AuthenticatedAppShoppingShoppingListIdRouteImport } from './routes/_authenticated/app.shopping.$shoppingListId'
 import { Route as AuthenticatedAppRecipesRecipeIdIndexRouteImport } from './routes/_authenticated/app.recipes.$recipeId.index'
 import { Route as AuthenticatedAppRecipesRecipeIdEditRouteImport } from './routes/_authenticated/app.recipes.$recipeId.edit'
 
@@ -113,6 +115,18 @@ const AuthenticatedAppRecipesNewRoute =
     path: '/app/recipes/new',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAppShoppingIndexRoute =
+  AuthenticatedAppShoppingIndexRouteImport.update({
+    id: '/app/shopping/',
+    path: '/app/shopping/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppShoppingShoppingListIdRoute =
+  AuthenticatedAppShoppingShoppingListIdRouteImport.update({
+    id: '/app/shopping/$shoppingListId',
+    path: '/app/shopping/$shoppingListId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAppRecipesRecipeIdIndexRoute =
   AuthenticatedAppRecipesRecipeIdIndexRouteImport.update({
     id: '/app/recipes/$recipeId/',
@@ -140,8 +154,10 @@ export interface FileRoutesByFullPath {
   '/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
   '/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/app/shopping/$shoppingListId': typeof AuthenticatedAppShoppingShoppingListIdRoute
   '/app/collections/': typeof AuthenticatedAppCollectionsIndexRoute
   '/app/recipes/': typeof AuthenticatedAppRecipesIndexRoute
+  '/app/shopping/': typeof AuthenticatedAppShoppingIndexRoute
   '/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
   '/app/recipes/$recipeId/': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
 }
@@ -159,8 +175,10 @@ export interface FileRoutesByTo {
   '/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
   '/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/app/shopping/$shoppingListId': typeof AuthenticatedAppShoppingShoppingListIdRoute
   '/app/collections': typeof AuthenticatedAppCollectionsIndexRoute
   '/app/recipes': typeof AuthenticatedAppRecipesIndexRoute
+  '/app/shopping': typeof AuthenticatedAppShoppingIndexRoute
   '/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
   '/app/recipes/$recipeId': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
 }
@@ -180,8 +198,10 @@ export interface FileRoutesById {
   '/_authenticated/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/_authenticated/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
   '/_authenticated/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/_authenticated/app/shopping/$shoppingListId': typeof AuthenticatedAppShoppingShoppingListIdRoute
   '/_authenticated/app/collections/': typeof AuthenticatedAppCollectionsIndexRoute
   '/_authenticated/app/recipes/': typeof AuthenticatedAppRecipesIndexRoute
+  '/_authenticated/app/shopping/': typeof AuthenticatedAppShoppingIndexRoute
   '/_authenticated/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
   '/_authenticated/app/recipes/$recipeId/': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
 }
@@ -201,8 +221,10 @@ export interface FileRouteTypes {
     | '/app/collections/$collectionId'
     | '/app/recipes/import'
     | '/app/recipes/new'
+    | '/app/shopping/$shoppingListId'
     | '/app/collections/'
     | '/app/recipes/'
+    | '/app/shopping/'
     | '/app/recipes/$recipeId/edit'
     | '/app/recipes/$recipeId/'
   fileRoutesByTo: FileRoutesByTo
@@ -220,8 +242,10 @@ export interface FileRouteTypes {
     | '/app/collections/$collectionId'
     | '/app/recipes/import'
     | '/app/recipes/new'
+    | '/app/shopping/$shoppingListId'
     | '/app/collections'
     | '/app/recipes'
+    | '/app/shopping'
     | '/app/recipes/$recipeId/edit'
     | '/app/recipes/$recipeId'
   id:
@@ -240,8 +264,10 @@ export interface FileRouteTypes {
     | '/_authenticated/app/collections/$collectionId'
     | '/_authenticated/app/recipes/import'
     | '/_authenticated/app/recipes/new'
+    | '/_authenticated/app/shopping/$shoppingListId'
     | '/_authenticated/app/collections/'
     | '/_authenticated/app/recipes/'
+    | '/_authenticated/app/shopping/'
     | '/_authenticated/app/recipes/$recipeId/edit'
     | '/_authenticated/app/recipes/$recipeId/'
   fileRoutesById: FileRoutesById
@@ -370,6 +396,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRecipesNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app/shopping/': {
+      id: '/_authenticated/app/shopping/'
+      path: '/app/shopping'
+      fullPath: '/app/shopping/'
+      preLoaderRoute: typeof AuthenticatedAppShoppingIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/shopping/$shoppingListId': {
+      id: '/_authenticated/app/shopping/$shoppingListId'
+      path: '/app/shopping/$shoppingListId'
+      fullPath: '/app/shopping/$shoppingListId'
+      preLoaderRoute: typeof AuthenticatedAppShoppingShoppingListIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/app/recipes/$recipeId/': {
       id: '/_authenticated/app/recipes/$recipeId/'
       path: '/app/recipes/$recipeId'
@@ -395,8 +435,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppCollectionsCollectionIdRoute: typeof AuthenticatedAppCollectionsCollectionIdRoute
   AuthenticatedAppRecipesImportRoute: typeof AuthenticatedAppRecipesImportRoute
   AuthenticatedAppRecipesNewRoute: typeof AuthenticatedAppRecipesNewRoute
+  AuthenticatedAppShoppingShoppingListIdRoute: typeof AuthenticatedAppShoppingShoppingListIdRoute
   AuthenticatedAppCollectionsIndexRoute: typeof AuthenticatedAppCollectionsIndexRoute
   AuthenticatedAppRecipesIndexRoute: typeof AuthenticatedAppRecipesIndexRoute
+  AuthenticatedAppShoppingIndexRoute: typeof AuthenticatedAppShoppingIndexRoute
   AuthenticatedAppRecipesRecipeIdEditRoute: typeof AuthenticatedAppRecipesRecipeIdEditRoute
   AuthenticatedAppRecipesRecipeIdIndexRoute: typeof AuthenticatedAppRecipesRecipeIdIndexRoute
 }
@@ -410,8 +452,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedAppCollectionsCollectionIdRoute,
   AuthenticatedAppRecipesImportRoute: AuthenticatedAppRecipesImportRoute,
   AuthenticatedAppRecipesNewRoute: AuthenticatedAppRecipesNewRoute,
+  AuthenticatedAppShoppingShoppingListIdRoute:
+    AuthenticatedAppShoppingShoppingListIdRoute,
   AuthenticatedAppCollectionsIndexRoute: AuthenticatedAppCollectionsIndexRoute,
   AuthenticatedAppRecipesIndexRoute: AuthenticatedAppRecipesIndexRoute,
+  AuthenticatedAppShoppingIndexRoute: AuthenticatedAppShoppingIndexRoute,
   AuthenticatedAppRecipesRecipeIdEditRoute:
     AuthenticatedAppRecipesRecipeIdEditRoute,
   AuthenticatedAppRecipesRecipeIdIndexRoute:
