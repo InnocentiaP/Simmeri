@@ -548,3 +548,190 @@ export async function getMostRecentCookingHistoryId(recipeId: string): Promise<s
   if (error) throw error;
   return data?.id ?? null;
 }
+
+export type ShoppingList = Database["public"]["Tables"]["shopping_lists"]["Row"];
+export type ShoppingListItem = Database["public"]["Tables"]["shopping_list_items"]["Row"];
+
+export async function listShoppingLists(includeArchived = false): Promise<ShoppingList[]> {
+  let q = supabase.from("shopping_lists").select("*").order("created_at", { ascending: false });
+  if (!includeArchived) q = q.is("archived_at", null);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+// RLS-scoped: a nonexistent id and another user's list id are
+// indistinguishable here — both resolve to null, matching the same pattern
+// already used by getCollection().
+export async function getShoppingList(id: string): Promise<ShoppingList | null> {
+  const { data, error } = await supabase.from("shopping_lists").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function createShoppingList(userId: string, name: string): Promise<string> {
+  const { data, error } = await supabase
+    .from("shopping_lists")
+    .insert({ user_id: userId, name })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+export async function renameShoppingList(id: string, name: string) {
+  const { error } = await supabase.from("shopping_lists").update({ name }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function archiveShoppingList(id: string) {
+  const { error } = await supabase
+    .from("shopping_lists")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function restoreShoppingList(id: string) {
+  const { error } = await supabase.from("shopping_lists").update({ archived_at: null }).eq("id", id);
+  if (error) throw error;
+}
+
+// Cascades only shopping_list_items (ON DELETE CASCADE) — never touches
+// Kitchen Inventory, regardless of whether items were ever confirmed there.
+export async function deleteShoppingList(id: string) {
+  const { error } = await supabase.from("shopping_lists").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// All items across all of the current user's lists (RLS-scoped), used to
+// derive per-list purchased/unpurchased counts at read time on the list
+// index — no stored/cached count column, matching the Collections precedent
+// (listAllCollectionMembershipCollectionIds).
+export async function listAllShoppingListItemStates(): Promise<
+  Pick<ShoppingListItem, "shopping_list_id" | "is_purchased">[]
+> {
+  const { data, error } = await supabase.from("shopping_list_items").select("shopping_list_id, is_purchased");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listShoppingListItems(shoppingListId: string): Promise<ShoppingListItem[]> {
+  const { data, error } = await supabase
+    .from("shopping_list_items")
+    .select("*")
+    .eq("shopping_list_id", shoppingListId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface ShoppingListItemCreateInput {
+  userId: string;
+  shoppingListId: string;
+  displayName: string;
+  quantityText: string | null;
+  unit: string | null;
+  note: string | null;
+}
+
+export async function createShoppingListItem(input: ShoppingListItemCreateInput): Promise<string> {
+  const { data, error } = await supabase
+    .from("shopping_list_items")
+    .insert({
+      user_id: input.userId,
+      shopping_list_id: input.shoppingListId,
+      display_name: input.displayName,
+      quantity_text: input.quantityText,
+      unit: input.unit,
+      note: input.note,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+export interface ShoppingListItemUpdateInput {
+  displayName?: string;
+  quantityText?: string | null;
+  unit?: string | null;
+  note?: string | null;
+}
+
+export async function updateShoppingListItem(id: string, input: ShoppingListItemUpdateInput) {
+  const payload: Database["public"]["Tables"]["shopping_list_items"]["Update"] = {};
+  if (input.displayName !== undefined) payload.display_name = input.displayName;
+  if (input.quantityText !== undefined) payload.quantity_text = input.quantityText;
+  if (input.unit !== undefined) payload.unit = input.unit;
+  if (input.note !== undefined) payload.note = input.note;
+  const { error } = await supabase.from("shopping_list_items").update(payload).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteShoppingListItem(id: string) {
+  const { error } = await supabase.from("shopping_list_items").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// Purchased state is a simple paired flag on the item itself (DB-enforced
+// pairing via shopping_list_items_purchased_pair_check) — neither of these
+// ever touches Kitchen Inventory. Kitchen updates only ever happen through
+// the separate, explicit confirmKitchenUpdatePlan-driven flow below.
+export async function markShoppingListItemPurchased(id: string) {
+  const { error } = await supabase
+    .from("shopping_list_items")
+    .update({ is_purchased: true, purchased_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function markShoppingListItemUnpurchased(id: string) {
+  const { error } = await supabase
+    .from("shopping_list_items")
+    .update({ is_purchased: false, purchased_at: null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// Reuses listKitchenItems(false) (already defined above) as "list active
+// Kitchen items for matching" — no separate function needed.
+
+export interface KitchenItemCreateInput {
+  userId: string;
+  ingredientName: string;
+  status: string;
+  storageLocation: string;
+}
+
+// Matches the exact insert shape AddItemDialog uses on the Kitchen page.
+export async function createKitchenItem(input: KitchenItemCreateInput): Promise<string> {
+  const { data, error } = await supabase
+    .from("kitchen_items")
+    .insert({
+      user_id: input.userId,
+      ingredient_name: input.ingredientName,
+      status: input.status,
+      storage_location: input.storageLocation,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+export interface KitchenItemUpdatePatch {
+  status?: string;
+  storageLocation?: string;
+}
+
+// Matches the exact update shape the Kitchen page's inline status/location
+// selects already use (supabase.from("kitchen_items").update(patch)).
+export async function updateKitchenItem(id: string, patch: KitchenItemUpdatePatch) {
+  const payload: Database["public"]["Tables"]["kitchen_items"]["Update"] = {};
+  if (patch.status !== undefined) payload.status = patch.status;
+  if (patch.storageLocation !== undefined) payload.storage_location = patch.storageLocation;
+  const { error } = await supabase.from("kitchen_items").update(payload).eq("id", id);
+  if (error) throw error;
+}
