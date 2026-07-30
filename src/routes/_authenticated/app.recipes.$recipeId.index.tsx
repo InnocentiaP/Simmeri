@@ -18,6 +18,7 @@ import { CoverPhotoUploader } from "@/components/app/CoverPhotoUploader";
 import { CollectionPicker } from "@/components/app/CollectionPicker";
 import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
 import { CookingHistoryList } from "@/components/app/CookingHistoryList";
+import { MealPlanEntryForm } from "@/components/app/MealPlanEntryForm";
 import { removeRecipeMedia } from "@/lib/media/storage";
 import { toast } from "sonner";
 import {
@@ -31,6 +32,7 @@ import {
   ExternalLink,
   FolderOpen,
   ChefHat,
+  CalendarPlus,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -46,6 +48,7 @@ function RecipeDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showCollectionPicker, setShowCollectionPicker] = useState(false);
   const [showMarkCooked, setShowMarkCooked] = useState(false);
+  const [showAddToPlan, setShowAddToPlan] = useState(false);
 
   const collectionsQuery = useQuery({
     queryKey: ["collections", true],
@@ -203,6 +206,13 @@ function RecipeDetail() {
             className="inline-flex items-center gap-1 rounded-full bg-olive-deep px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-olive"
           >
             <ChefHat className="h-3.5 w-3.5" /> Mark as cooked
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddToPlan(true)}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/40"
+          >
+            <CalendarPlus className="h-3.5 w-3.5" /> Add to Meal Plan
           </button>
           <Link
             to="/app/recipes/$recipeId/edit"
@@ -372,6 +382,18 @@ function RecipeDetail() {
             qc.invalidateQueries({ queryKey: ["cooking-history", recipeId] });
           }}
           onClose={() => setShowMarkCooked(false)}
+        />
+      )}
+
+      {showAddToPlan && (
+        <MealPlanEntryForm
+          mode="create"
+          recipe={recipe}
+          onDone={() => {
+            setShowAddToPlan(false);
+            qc.invalidateQueries({ queryKey: ["meal-plan-entries"] });
+          }}
+          onClose={() => setShowAddToPlan(false)}
         />
       )}
 

@@ -428,3 +428,123 @@ export async function deleteRecipe(id: string) {
   const { error } = await supabase.from("recipes").delete().eq("id", id);
   if (error) throw error;
 }
+
+export type MealPlanEntry = Database["public"]["Tables"]["meal_plan_entries"]["Row"];
+
+// Batched lookups used by both the planner (day/week views) and the
+// dashboard's "today's meals" section — one query per table regardless of
+// how many entries are in range, avoiding an N+1 fetch per entry.
+export async function listRecipesByIds(recipeIds: string[]): Promise<Recipe[]> {
+  if (recipeIds.length === 0) return [];
+  const { data, error } = await supabase.from("recipes").select("*").in("id", recipeIds);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listRecipeIngredientsForRecipeIds(
+  recipeIds: string[],
+): Promise<RecipeIngredient[]> {
+  if (recipeIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("recipe_ingredients")
+    .select("*")
+    .in("recipe_id", recipeIds);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Inclusive date-range fetch (both bounds are YYYY-MM-DD date-only strings) —
+// the single generic read used by the day view (range = one day), the week
+// view (range = 7 days), and the dashboard (range = today, or a short
+// look-ahead window to find the next planned meal).
+export async function listMealPlanEntriesInRange(
+  startDateKey: string,
+  endDateKey: string,
+): Promise<MealPlanEntry[]> {
+  const { data, error } = await supabase
+    .from("meal_plan_entries")
+    .select("*")
+    .gte("planned_date", startDateKey)
+    .lte("planned_date", endDateKey)
+    .order("planned_date", { ascending: true })
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface MealPlanEntryCreateInput {
+  userId: string;
+  recipeId: string;
+  plannedDate: string;
+  mealType: string;
+  servings: number | null;
+  notes: string | null;
+}
+
+export async function createMealPlanEntry(input: MealPlanEntryCreateInput): Promise<string> {
+  const { data, error } = await supabase
+    .from("meal_plan_entries")
+    .insert({
+      user_id: input.userId,
+      recipe_id: input.recipeId,
+      planned_date: input.plannedDate,
+      meal_type: input.mealType,
+      servings: input.servings,
+      notes: input.notes,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+export interface MealPlanEntryUpdateInput {
+  recipeId?: string;
+  plannedDate?: string;
+  mealType?: string;
+  servings?: number | null;
+  notes?: string | null;
+  position?: number;
+  status?: string;
+  cookingHistoryId?: string | null;
+}
+
+// Partial update — only the fields the caller actually passes are sent to
+// Postgres, so e.g. moving an entry (plannedDate/mealType only) never
+// clobbers its notes/servings, and marking it cooked (status/
+// cookingHistoryId only) never touches its date/slot.
+export async function updateMealPlanEntry(entryId: string, input: MealPlanEntryUpdateInput) {
+  const payload: Database["public"]["Tables"]["meal_plan_entries"]["Update"] = {};
+  if (input.recipeId !== undefined) payload.recipe_id = input.recipeId;
+  if (input.plannedDate !== undefined) payload.planned_date = input.plannedDate;
+  if (input.mealType !== undefined) payload.meal_type = input.mealType;
+  if (input.servings !== undefined) payload.servings = input.servings;
+  if (input.notes !== undefined) payload.notes = input.notes;
+  if (input.position !== undefined) payload.position = input.position;
+  if (input.status !== undefined) payload.status = input.status;
+  if (input.cookingHistoryId !== undefined) payload.cooking_history_id = input.cookingHistoryId;
+  const { error } = await supabase.from("meal_plan_entries").update(payload).eq("id", entryId);
+  if (error) throw error;
+}
+
+export async function deleteMealPlanEntry(entryId: string) {
+  const { error } = await supabase.from("meal_plan_entries").delete().eq("id", entryId);
+  if (error) throw error;
+}
+
+// Used right after marking a planned entry as Cooked (via the existing
+// CookingHistoryForm, unmodified) to find the entry that form just created,
+// so it can be linked back via meal_plan_entries.cooking_history_id. Ordered
+// by created_at (insertion order), not cooked_at, so a deliberately
+// backdated cooked-on date still resolves to "the row just inserted."
+export async function getMostRecentCookingHistoryId(recipeId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("cooking_history")
+    .select("id")
+    .eq("recipe_id", recipeId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}

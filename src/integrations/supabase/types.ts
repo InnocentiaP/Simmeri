@@ -179,6 +179,51 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_plan_entries: {
+        Row: {
+          cooking_history_id: string | null
+          created_at: string
+          id: string
+          meal_type: string
+          notes: string | null
+          planned_date: string
+          position: number
+          recipe_id: string
+          servings: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cooking_history_id?: string | null
+          created_at?: string
+          id?: string
+          meal_type?: string
+          notes?: string | null
+          planned_date: string
+          position?: number
+          recipe_id: string
+          servings?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cooking_history_id?: string | null
+          created_at?: string
+          id?: string
+          meal_type?: string
+          notes?: string | null
+          planned_date?: string
+          position?: number
+          recipe_id?: string
+          servings?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

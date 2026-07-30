@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
-import { BookOpen, Plus, Refrigerator, ChefHat } from "lucide-react";
+import { BookOpen, Plus, Refrigerator, ChefHat, CalendarDays } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
+import { formatDateKey, addDays } from "@/lib/date-range";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Home — Simmeri" }] }),
@@ -15,17 +16,29 @@ function useDashboardData() {
   return useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
-      const [recipesRes, ingredientsRes, kitchenRes] = await Promise.all([
+      const todayKey = formatDateKey(new Date());
+      const weekAheadKey = formatDateKey(addDays(new Date(), 6));
+      const [recipesRes, ingredientsRes, kitchenRes, mealPlanRes] = await Promise.all([
         supabase.from("recipes").select("*").is("archived_at", null).order("created_at", { ascending: false }),
         supabase.from("recipe_ingredients").select("*"),
         supabase.from("kitchen_items").select("*").is("archived_at", null),
+        supabase
+          .from("meal_plan_entries")
+          .select("*")
+          .eq("status", "planned")
+          .gte("planned_date", todayKey)
+          .lte("planned_date", weekAheadKey)
+          .order("planned_date", { ascending: true })
+          .order("position", { ascending: true }),
       ]);
       if (recipesRes.error) throw recipesRes.error;
       if (ingredientsRes.error) throw ingredientsRes.error;
       if (kitchenRes.error) throw kitchenRes.error;
+      if (mealPlanRes.error) throw mealPlanRes.error;
       const recipes = recipesRes.data ?? [];
       const ingredients = ingredientsRes.data ?? [];
       const kitchen = kitchenRes.data ?? [];
+      const mealPlanEntries = mealPlanRes.data ?? [];
       const readinessByRecipe = new Map<string, ReturnType<typeof computeReadiness>>();
       for (const r of recipes) {
         const rIng = ingredients
@@ -36,7 +49,11 @@ function useDashboardData() {
           }));
         readinessByRecipe.set(r.id, computeReadiness(rIng, kitchen));
       }
-      return { recipes, kitchen, readinessByRecipe };
+      const todaysMeals = mealPlanEntries.filter((e) => e.planned_date === todayKey);
+      // Today has nothing planned — look ahead up to 6 more days for the
+      // single next planned meal rather than showing a bare empty state.
+      const nextMeal = todaysMeals.length === 0 ? (mealPlanEntries[0] ?? null) : null;
+      return { recipes, kitchen, readinessByRecipe, todaysMeals, nextMeal };
     },
   });
 }
@@ -55,6 +72,9 @@ function Dashboard() {
   const ready = [...readinessByRecipe.values()].filter((r) => r.label === "ready_to_cook").length;
   const almost = [...readinessByRecipe.values()].filter((r) => r.label === "almost_ready").length;
   const recent = recipes.slice(0, 4);
+  const todaysMeals = data?.todaysMeals ?? [];
+  const nextMeal = data?.nextMeal ?? null;
+  const recipeById = new Map(recipes.map((r) => [r.id, r]));
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -70,11 +90,68 @@ function Dashboard() {
         <Stat label="Almost ready" value={almost} tone="warm" />
       </div>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-3">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <QuickAction to="/app/recipes/new" icon={Plus} label="Add recipe" />
         <QuickAction to="/app/recipes" icon={BookOpen} label="My recipes" />
         <QuickAction to="/app/kitchen" icon={Refrigerator} label="Update kitchen" />
+        <QuickAction to="/app/planner" icon={CalendarDays} label="Plan meals" />
       </div>
+
+      <section className="mt-10">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-xl font-semibold text-olive-deep">Today's meals</h2>
+          <Link to="/app/planner" className="text-sm text-cocoa hover:underline">
+            View all
+          </Link>
+        </div>
+        {todaysMeals.length === 0 && !nextMeal && (
+          <div className="rounded-2xl border border-dashed border-border bg-cream/40 p-4 text-center text-sm text-cocoa/70">
+            Nothing planned for today.{" "}
+            <Link to="/app/planner" className="text-olive-deep underline">
+              Plan a meal
+            </Link>
+            .
+          </div>
+        )}
+        {todaysMeals.length === 0 && nextMeal && (
+          <div className="rounded-2xl border border-border/70 bg-background p-4 text-sm text-cocoa/70">
+            Nothing planned for today. Next up:{" "}
+            <span className="font-medium text-cocoa">
+              {recipeById.get(nextMeal.recipe_id)?.title ?? "a recipe"}
+            </span>{" "}
+            on {new Date(nextMeal.planned_date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}{" "}
+            ({nextMeal.meal_type}).
+          </div>
+        )}
+        {todaysMeals.length > 0 && (
+          <ul className="flex flex-col gap-2">
+            {todaysMeals.map((entry) => {
+              const recipe = recipeById.get(entry.recipe_id);
+              return (
+                <li key={entry.id}>
+                  <Link
+                    to="/app/planner"
+                    className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background p-3 hover:bg-cream-deep/40"
+                  >
+                    <RecipeCoverImage
+                      bucket={recipe?.cover_storage_bucket ?? null}
+                      path={recipe?.cover_storage_path ?? null}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-lg"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-cocoa">
+                        {recipe?.title ?? "Recipe unavailable"}
+                      </p>
+                      <p className="text-xs capitalize text-cocoa/60">{entry.meal_type}</p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between">
