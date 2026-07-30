@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, BookOpen, Plus, Refrigerator, Settings, LogOut, Menu, X } from "lucide-react";
+import { Home, BookOpen, Plus, Refrigerator, Settings, LogOut, Menu, X, FolderOpen } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 const nav = [
   { to: "/app" as const, label: "Home", icon: Home, exact: true },
   { to: "/app/recipes" as const, label: "My Recipes", icon: BookOpen, exact: false },
+  { to: "/app/collections" as const, label: "Collections", icon: FolderOpen, exact: false },
   { to: "/app/recipes/new" as const, label: "Add Recipe", icon: Plus, exact: true },
   { to: "/app/kitchen" as const, label: "Kitchen", icon: Refrigerator, exact: true },
   { to: "/app/settings" as const, label: "Settings", icon: Settings, exact: true },

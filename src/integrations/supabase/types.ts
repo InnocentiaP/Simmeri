@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      collection_recipes: {
+        Row: {
+          collection_id: string
+          created_at: string
+          recipe_id: string
+          user_id: string
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          recipe_id: string
+          user_id: string
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          recipe_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      collections: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       early_access_signups: {
         Row: {
           created_at: string
@@ -196,6 +244,9 @@ export type Database = {
           notes: string | null
           prep_time_minutes: number | null
           servings: number | null
+          cover_storage_bucket: string | null
+          cover_storage_path: string | null
+          cover_source: string | null
           source_title: string | null
           source_url: string | null
           title: string
@@ -211,6 +262,9 @@ export type Database = {
           notes?: string | null
           prep_time_minutes?: number | null
           servings?: number | null
+          cover_storage_bucket?: string | null
+          cover_storage_path?: string | null
+          cover_source?: string | null
           source_title?: string | null
           source_url?: string | null
           title: string
@@ -226,6 +280,9 @@ export type Database = {
           notes?: string | null
           prep_time_minutes?: number | null
           servings?: number | null
+          cover_storage_bucket?: string | null
+          cover_storage_path?: string | null
+          cover_source?: string | null
           source_title?: string | null
           source_url?: string | null
           title?: string

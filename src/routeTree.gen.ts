@@ -19,6 +19,8 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppKitchenRouteImport } from './routes/_authenticated/app.kitchen'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
+import { Route as AuthenticatedAppCollectionsIndexRouteImport } from './routes/_authenticated/app.collections.index'
+import { Route as AuthenticatedAppCollectionsCollectionIdRouteImport } from './routes/_authenticated/app.collections.$collectionId'
 import { Route as AuthenticatedAppRecipesIndexRouteImport } from './routes/_authenticated/app.recipes.index'
 import { Route as AuthenticatedAppRecipesImportRouteImport } from './routes/_authenticated/app.recipes.import'
 import { Route as AuthenticatedAppRecipesNewRouteImport } from './routes/_authenticated/app.recipes.new'
@@ -75,6 +77,18 @@ const AuthenticatedAppSettingsRoute =
     path: '/app/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAppCollectionsIndexRoute =
+  AuthenticatedAppCollectionsIndexRouteImport.update({
+    id: '/app/collections/',
+    path: '/app/collections/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppCollectionsCollectionIdRoute =
+  AuthenticatedAppCollectionsCollectionIdRouteImport.update({
+    id: '/app/collections/$collectionId',
+    path: '/app/collections/$collectionId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAppRecipesIndexRoute =
   AuthenticatedAppRecipesIndexRouteImport.update({
     id: '/app/recipes/',
@@ -116,8 +130,10 @@ export interface FileRoutesByFullPath {
   '/app/kitchen': typeof AuthenticatedAppKitchenRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
   '/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/app/collections/': typeof AuthenticatedAppCollectionsIndexRoute
   '/app/recipes/': typeof AuthenticatedAppRecipesIndexRoute
   '/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
   '/app/recipes/$recipeId/': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
@@ -132,8 +148,10 @@ export interface FileRoutesByTo {
   '/app/kitchen': typeof AuthenticatedAppKitchenRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
   '/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/app/collections': typeof AuthenticatedAppCollectionsIndexRoute
   '/app/recipes': typeof AuthenticatedAppRecipesIndexRoute
   '/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
   '/app/recipes/$recipeId': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
@@ -150,8 +168,10 @@ export interface FileRoutesById {
   '/_authenticated/app/kitchen': typeof AuthenticatedAppKitchenRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/_authenticated/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
   '/_authenticated/app/recipes/new': typeof AuthenticatedAppRecipesNewRoute
+  '/_authenticated/app/collections/': typeof AuthenticatedAppCollectionsIndexRoute
   '/_authenticated/app/recipes/': typeof AuthenticatedAppRecipesIndexRoute
   '/_authenticated/app/recipes/$recipeId/edit': typeof AuthenticatedAppRecipesRecipeIdEditRoute
   '/_authenticated/app/recipes/$recipeId/': typeof AuthenticatedAppRecipesRecipeIdIndexRoute
@@ -168,8 +188,10 @@ export interface FileRouteTypes {
     | '/app/kitchen'
     | '/app/settings'
     | '/app/'
+    | '/app/collections/$collectionId'
     | '/app/recipes/import'
     | '/app/recipes/new'
+    | '/app/collections/'
     | '/app/recipes/'
     | '/app/recipes/$recipeId/edit'
     | '/app/recipes/$recipeId/'
@@ -184,8 +206,10 @@ export interface FileRouteTypes {
     | '/app/kitchen'
     | '/app/settings'
     | '/app'
+    | '/app/collections/$collectionId'
     | '/app/recipes/import'
     | '/app/recipes/new'
+    | '/app/collections'
     | '/app/recipes'
     | '/app/recipes/$recipeId/edit'
     | '/app/recipes/$recipeId'
@@ -201,8 +225,10 @@ export interface FileRouteTypes {
     | '/_authenticated/app/kitchen'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/'
+    | '/_authenticated/app/collections/$collectionId'
     | '/_authenticated/app/recipes/import'
     | '/_authenticated/app/recipes/new'
+    | '/_authenticated/app/collections/'
     | '/_authenticated/app/recipes/'
     | '/_authenticated/app/recipes/$recipeId/edit'
     | '/_authenticated/app/recipes/$recipeId/'
@@ -290,6 +316,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app/collections/': {
+      id: '/_authenticated/app/collections/'
+      path: '/app/collections'
+      fullPath: '/app/collections/'
+      preLoaderRoute: typeof AuthenticatedAppCollectionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/collections/$collectionId': {
+      id: '/_authenticated/app/collections/$collectionId'
+      path: '/app/collections/$collectionId'
+      fullPath: '/app/collections/$collectionId'
+      preLoaderRoute: typeof AuthenticatedAppCollectionsCollectionIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/app/recipes/': {
       id: '/_authenticated/app/recipes/'
       path: '/app/recipes'
@@ -332,8 +372,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppKitchenRoute: typeof AuthenticatedAppKitchenRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppCollectionsCollectionIdRoute: typeof AuthenticatedAppCollectionsCollectionIdRoute
   AuthenticatedAppRecipesImportRoute: typeof AuthenticatedAppRecipesImportRoute
   AuthenticatedAppRecipesNewRoute: typeof AuthenticatedAppRecipesNewRoute
+  AuthenticatedAppCollectionsIndexRoute: typeof AuthenticatedAppCollectionsIndexRoute
   AuthenticatedAppRecipesIndexRoute: typeof AuthenticatedAppRecipesIndexRoute
   AuthenticatedAppRecipesRecipeIdEditRoute: typeof AuthenticatedAppRecipesRecipeIdEditRoute
   AuthenticatedAppRecipesRecipeIdIndexRoute: typeof AuthenticatedAppRecipesRecipeIdIndexRoute
@@ -343,8 +385,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppKitchenRoute: AuthenticatedAppKitchenRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppCollectionsCollectionIdRoute:
+    AuthenticatedAppCollectionsCollectionIdRoute,
   AuthenticatedAppRecipesImportRoute: AuthenticatedAppRecipesImportRoute,
   AuthenticatedAppRecipesNewRoute: AuthenticatedAppRecipesNewRoute,
+  AuthenticatedAppCollectionsIndexRoute: AuthenticatedAppCollectionsIndexRoute,
   AuthenticatedAppRecipesIndexRoute: AuthenticatedAppRecipesIndexRoute,
   AuthenticatedAppRecipesRecipeIdEditRoute:
     AuthenticatedAppRecipesRecipeIdEditRoute,
