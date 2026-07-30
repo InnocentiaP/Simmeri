@@ -7,6 +7,8 @@ import {
   deleteRecipe,
   listCollections,
   listCollectionIdsForRecipe,
+  listCookingHistory,
+  listCookingPhotosForHistoryIds,
 } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
@@ -14,6 +16,9 @@ import { shouldShowSourceLink, safeHostname } from "@/lib/url-safety";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
 import { CoverPhotoUploader } from "@/components/app/CoverPhotoUploader";
 import { CollectionPicker } from "@/components/app/CollectionPicker";
+import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
+import { CookingHistoryList } from "@/components/app/CookingHistoryList";
+import { removeRecipeMedia } from "@/lib/media/storage";
 import { toast } from "sonner";
 import {
   ChevronLeft,
@@ -25,6 +30,7 @@ import {
   Users,
   ExternalLink,
   FolderOpen,
+  ChefHat,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -39,6 +45,7 @@ function RecipeDetail() {
   const qc = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showCollectionPicker, setShowCollectionPicker] = useState(false);
+  const [showMarkCooked, setShowMarkCooked] = useState(false);
 
   const collectionsQuery = useQuery({
     queryKey: ["collections", true],
@@ -85,7 +92,40 @@ function RecipeDetail() {
     },
   });
   const deleteMut = useMutation({
-    mutationFn: async () => deleteRecipe(recipeId),
+    mutationFn: async () => {
+      // Best-effort Storage cleanup before the row (and its DB-cascaded
+      // cooking_history/cooking_photos rows) are deleted. Never blocks
+      // recipe deletion — a cleanup failure here is swallowed, not thrown.
+      try {
+        const cleanupByBucket = new Map<string, string[]>();
+        const addPath = (bucket: string, path: string) => {
+          cleanupByBucket.set(bucket, [...(cleanupByBucket.get(bucket) ?? []), path]);
+        };
+
+        // Only a direct-upload cover's object needs cleanup here — a
+        // cooking-photo-sourced cover's object is already collected below
+        // via that recipe's own cooking-history photos.
+        if (
+          data?.recipe.cover_source === "direct_upload" &&
+          data.recipe.cover_storage_bucket &&
+          data.recipe.cover_storage_path
+        ) {
+          addPath(data.recipe.cover_storage_bucket, data.recipe.cover_storage_path);
+        }
+
+        const historyEntries = await listCookingHistory(recipeId);
+        const photos = await listCookingPhotosForHistoryIds(historyEntries.map((h) => h.id));
+        for (const photo of photos) addPath(photo.storage_bucket, photo.storage_path);
+
+        for (const [bucket, paths] of cleanupByBucket) {
+          await removeRecipeMedia(bucket, paths).catch(() => {});
+        }
+      } catch {
+        // Best-effort only.
+      }
+
+      await deleteRecipe(recipeId);
+    },
     onSuccess: () => {
       toast.success("Deleted");
       qc.invalidateQueries();
@@ -157,6 +197,13 @@ function RecipeDetail() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowMarkCooked(true)}
+            className="inline-flex items-center gap-1 rounded-full bg-olive-deep px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-olive"
+          >
+            <ChefHat className="h-3.5 w-3.5" /> Mark as cooked
+          </button>
           <Link
             to="/app/recipes/$recipeId/edit"
             params={{ recipeId }}
@@ -305,10 +352,27 @@ function RecipeDetail() {
       </section>
 
       {recipe.notes && (
-        <section className="rounded-3xl border border-border/70 bg-cream/40 p-5">
+        <section className="mb-6 rounded-3xl border border-border/70 bg-cream/40 p-5">
           <h2 className="mb-2 font-display text-lg font-semibold text-olive-deep">Notes</h2>
           <p className="whitespace-pre-wrap text-sm text-cocoa">{recipe.notes}</p>
         </section>
+      )}
+
+      <section className="rounded-3xl border border-border/70 bg-background p-5">
+        <h2 className="mb-3 font-display text-xl font-semibold text-olive-deep">Cooking History</h2>
+        <CookingHistoryList recipeId={recipeId} recipe={recipe} />
+      </section>
+
+      {showMarkCooked && (
+        <CookingHistoryForm
+          mode="create"
+          recipeId={recipeId}
+          onDone={() => {
+            setShowMarkCooked(false);
+            qc.invalidateQueries({ queryKey: ["cooking-history", recipeId] });
+          }}
+          onClose={() => setShowMarkCooked(false)}
+        />
       )}
 
       {confirmDelete && (

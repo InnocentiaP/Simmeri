@@ -25,3 +25,19 @@ export function buildRecipeCoverPath(
   const ext = extensionForMimeType(mimeType);
   return `${userId}/recipes/${recipeId}/cover/${uuid}.${ext}`;
 }
+
+// Always {user_id}/cooking-history/{cooking_history_id}/{uuid}.{ext} — the
+// same owner-first-segment shape as buildRecipeCoverPath above, so the
+// existing recipe-media Storage policies (which key only on path segment 1)
+// cover this path too without any new policy. Added narrowly alongside the
+// existing cover path builder rather than generalizing it into one
+// parameterized function, so recipe-cover uploads are untouched.
+export function buildCookingPhotoPath(
+  userId: string,
+  cookingHistoryId: string,
+  uuid: string,
+  mimeType: string,
+): string {
+  const ext = extensionForMimeType(mimeType);
+  return `${userId}/cooking-history/${cookingHistoryId}/${uuid}.${ext}`;
+}

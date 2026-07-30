@@ -62,6 +62,66 @@ export type Database = {
         }
         Relationships: []
       }
+      cooking_history: {
+        Row: {
+          cooked_at: string
+          created_at: string
+          id: string
+          notes: string | null
+          recipe_id: string
+          servings_made: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cooked_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recipe_id: string
+          servings_made?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cooked_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recipe_id?: string
+          servings_made?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cooking_photos: {
+        Row: {
+          cooking_history_id: string
+          created_at: string
+          id: string
+          storage_bucket: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          cooking_history_id: string
+          created_at?: string
+          id?: string
+          storage_bucket: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          cooking_history_id?: string
+          created_at?: string
+          id?: string
+          storage_bucket?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       early_access_signups: {
         Row: {
           created_at: string
@@ -247,6 +307,7 @@ export type Database = {
           cover_storage_bucket: string | null
           cover_storage_path: string | null
           cover_source: string | null
+          cover_cooking_photo_id: string | null
           source_title: string | null
           source_url: string | null
           title: string
@@ -265,6 +326,7 @@ export type Database = {
           cover_storage_bucket?: string | null
           cover_storage_path?: string | null
           cover_source?: string | null
+          cover_cooking_photo_id?: string | null
           source_title?: string | null
           source_url?: string | null
           title: string
@@ -283,6 +345,7 @@ export type Database = {
           cover_storage_bucket?: string | null
           cover_storage_path?: string | null
           cover_source?: string | null
+          cover_cooking_photo_id?: string | null
           source_title?: string | null
           source_url?: string | null
           title?: string

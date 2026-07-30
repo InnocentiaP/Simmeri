@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export { extensionForMimeType, buildRecipeCoverPath } from "./path-utils";
+export { extensionForMimeType, buildRecipeCoverPath, buildCookingPhotoPath } from "./path-utils";
 
 export const RECIPE_MEDIA_BUCKET = "recipe-media";
 
