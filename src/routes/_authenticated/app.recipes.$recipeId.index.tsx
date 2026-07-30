@@ -19,6 +19,7 @@ import { CollectionPicker } from "@/components/app/CollectionPicker";
 import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
 import { CookingHistoryList } from "@/components/app/CookingHistoryList";
 import { MealPlanEntryForm } from "@/components/app/MealPlanEntryForm";
+import { ShoppingGenerationReview } from "@/components/app/ShoppingGenerationReview";
 import { removeRecipeMedia } from "@/lib/media/storage";
 import { toast } from "sonner";
 import {
@@ -33,8 +34,15 @@ import {
   FolderOpen,
   ChefHat,
   CalendarPlus,
+  ShoppingCart,
 } from "lucide-react";
 import { useState } from "react";
+import {
+  generateCandidates,
+  toGenerationIngredients,
+  buildDirectRecipeContext,
+  type GeneratedCandidateItem,
+} from "@/lib/shopping-generate";
 
 export const Route = createFileRoute("/_authenticated/app/recipes/$recipeId/")({
   head: () => ({ meta: [{ title: "Recipe — Simmeri" }] }),
@@ -49,6 +57,7 @@ function RecipeDetail() {
   const [showCollectionPicker, setShowCollectionPicker] = useState(false);
   const [showMarkCooked, setShowMarkCooked] = useState(false);
   const [showAddToPlan, setShowAddToPlan] = useState(false);
+  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(null);
 
   const collectionsQuery = useQuery({
     queryKey: ["collections", true],
@@ -76,7 +85,7 @@ function RecipeDetail() {
         })),
         kit.data ?? [],
       );
-      return { ...detail, readiness };
+      return { ...detail, readiness, kitchenItems: kit.data ?? [] };
     },
   });
 
@@ -135,6 +144,20 @@ function RecipeDetail() {
       navigate({ to: "/app/recipes" });
     },
   });
+
+  function handleGenerateShoppingItems() {
+    if (!data) return;
+    const context = buildDirectRecipeContext({
+      id: data.recipe.id,
+      title: data.recipe.title,
+      servings: data.recipe.servings,
+    });
+    const generated = generateCandidates(
+      [{ context, ingredients: toGenerationIngredients(data.ingredients) }],
+      data.kitchenItems,
+    );
+    setGeneratedCandidates(generated);
+  }
 
   if (isLoading) return <div className="text-cocoa/70">Loading…</div>;
   if (error) return <div className="text-terracotta">Failed to load recipe.</div>;
@@ -213,6 +236,13 @@ function RecipeDetail() {
             className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/40"
           >
             <CalendarPlus className="h-3.5 w-3.5" /> Add to Meal Plan
+          </button>
+          <button
+            type="button"
+            onClick={handleGenerateShoppingItems}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/40"
+          >
+            <ShoppingCart className="h-3.5 w-3.5" /> Add missing ingredients
           </button>
           <Link
             to="/app/recipes/$recipeId/edit"
@@ -394,6 +424,13 @@ function RecipeDetail() {
             qc.invalidateQueries({ queryKey: ["meal-plan-entries"] });
           }}
           onClose={() => setShowAddToPlan(false)}
+        />
+      )}
+
+      {generatedCandidates && (
+        <ShoppingGenerationReview
+          candidates={generatedCandidates}
+          onClose={() => setGeneratedCandidates(null)}
         />
       )}
 

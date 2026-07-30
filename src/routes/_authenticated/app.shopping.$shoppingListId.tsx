@@ -6,6 +6,7 @@ import { ChevronLeft, Pencil, Archive, ArchiveRestore, Trash2, Plus, ChefHat } f
 import {
   getShoppingList,
   listShoppingListItems,
+  listShoppingItemSourcesForItems,
   renameShoppingList,
   archiveShoppingList,
   restoreShoppingList,
@@ -14,6 +15,7 @@ import {
   markShoppingListItemPurchased,
   markShoppingListItemUnpurchased,
   type ShoppingListItem,
+  type ShoppingItemSource,
 } from "@/lib/api";
 import { ShoppingListForm } from "@/components/app/ShoppingListForm";
 import { ShoppingItemForm } from "@/components/app/ShoppingItemForm";
@@ -48,6 +50,43 @@ function ShoppingListDetail() {
     queryFn: () => listShoppingListItems(shoppingListId),
     enabled: Boolean(listQuery.data),
   });
+
+  const itemIds = (itemsQuery.data ?? []).map((i) => i.id);
+  const sourcesQuery = useQuery({
+    queryKey: ["shopping-item-sources-for-list-items", shoppingListId, itemIds.join(",")],
+    queryFn: () => listShoppingItemSourcesForItems(itemIds),
+    enabled: itemIds.length > 0,
+  });
+
+  const sourcesByItemId = new Map<string, ShoppingItemSource[]>();
+  for (const source of sourcesQuery.data ?? []) {
+    sourcesByItemId.set(source.shopping_list_item_id, [
+      ...(sourcesByItemId.get(source.shopping_list_item_id) ?? []),
+      source,
+    ]);
+  }
+
+  function neededForLabel(itemId: string): string | null {
+    const sources = sourcesByItemId.get(itemId);
+    if (!sources || sources.length === 0) return null;
+    const labels = Array.from(
+      new Set(
+        sources.map((s) => {
+          const title = s.recipe_title_snapshot ?? "a recipe";
+          if (s.planned_date_snapshot && s.meal_type_snapshot) {
+            const date = new Date(s.planned_date_snapshot + "T00:00:00").toLocaleDateString(undefined, {
+              weekday: "long",
+            });
+            return `${title} · ${date} ${s.meal_type_snapshot}`;
+          }
+          return title;
+        }),
+      ),
+    );
+    if (labels.length === 1) return `Needed for ${labels[0]}`;
+    if (labels.length === 2) return `Needed for ${labels[0]} and ${labels[1]}`;
+    return `Needed for ${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+  }
 
   function invalidateItems() {
     qc.invalidateQueries({ queryKey: ["shopping-list-items", shoppingListId] });
@@ -236,6 +275,7 @@ function ShoppingListDetail() {
                     onDelete={(i) => {
                       if (window.confirm(`Delete "${i.display_name}"?`)) deleteItemMut.mutate(i);
                     }}
+                    neededFor={neededForLabel(item.id)}
                   />
                 ))}
               </ul>
@@ -258,6 +298,7 @@ function ShoppingListDetail() {
                     onDelete={(i) => {
                       if (window.confirm(`Delete "${i.display_name}"?`)) deleteItemMut.mutate(i);
                     }}
+                    neededFor={neededForLabel(item.id)}
                   />
                 ))}
               </ul>

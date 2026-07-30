@@ -7,17 +7,19 @@ interface ShoppingListItemRowProps {
   onEdit: (item: ShoppingListItem) => void;
   onDelete: (item: ShoppingListItem) => void;
   togglePending?: boolean;
+  // Precomputed "Needed for ..." label from the item's shopping_item_sources
+  // rows, or null/undefined for a manually-added item with no sources at
+  // all — manual items simply never display a provenance line.
+  neededFor?: string | null;
 }
 
-// No "Needed for" provenance line yet — shopping_item_sources and
-// generation-driven items are Checkpoint 3. Every item here is manually
-// added, so there is nothing to attribute.
 export function ShoppingListItemRow({
   item,
   onTogglePurchased,
   onEdit,
   onDelete,
   togglePending,
+  neededFor,
 }: ShoppingListItemRowProps) {
   return (
     <li className="flex items-start gap-3 rounded-xl border border-border/60 bg-background p-3">
@@ -42,6 +44,7 @@ export function ShoppingListItemRow({
           )}
         </p>
         {item.note && <p className="mt-0.5 text-xs text-cocoa/60">{item.note}</p>}
+        {neededFor && <p className="mt-0.5 text-xs italic text-cocoa/50">{neededFor}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <button
