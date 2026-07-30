@@ -273,6 +273,146 @@ export async function removeRecipeFromCollection(collectionId: string, recipeId:
   if (error) throw error;
 }
 
+export type CookingHistory = Database["public"]["Tables"]["cooking_history"]["Row"];
+export type CookingPhoto = Database["public"]["Tables"]["cooking_photos"]["Row"];
+
+export async function listCookingHistory(recipeId: string): Promise<CookingHistory[]> {
+  const { data, error } = await supabase
+    .from("cooking_history")
+    .select("*")
+    .eq("recipe_id", recipeId)
+    .order("cooked_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface CookingHistoryCreateInput {
+  recipeId: string;
+  userId: string;
+  cookedAt: string;
+  servingsMade: number | null;
+  notes: string | null;
+}
+
+export async function createCookingHistoryEntry(input: CookingHistoryCreateInput) {
+  const { data, error } = await supabase
+    .from("cooking_history")
+    .insert({
+      user_id: input.userId,
+      recipe_id: input.recipeId,
+      cooked_at: input.cookedAt,
+      servings_made: input.servingsMade,
+      notes: input.notes,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+export interface CookingHistoryUpdateInput {
+  cookedAt: string;
+  servingsMade: number | null;
+  notes: string | null;
+}
+
+// Only ever touches cooking_history — never the originating recipe's own
+// fields, regardless of what's edited here.
+export async function updateCookingHistoryEntry(
+  historyId: string,
+  input: CookingHistoryUpdateInput,
+) {
+  const { error } = await supabase
+    .from("cooking_history")
+    .update({
+      cooked_at: input.cookedAt,
+      servings_made: input.servingsMade,
+      notes: input.notes,
+    })
+    .eq("id", historyId);
+  if (error) throw error;
+}
+
+export async function deleteCookingHistoryEntry(historyId: string) {
+  const { error } = await supabase.from("cooking_history").delete().eq("id", historyId);
+  if (error) throw error;
+}
+
+// Batched lookup for multiple history entries at once (used when rendering
+// a recipe's full cooking history), avoiding one query per entry.
+export async function listCookingPhotosForHistoryIds(
+  historyIds: string[],
+): Promise<CookingPhoto[]> {
+  if (historyIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("cooking_photos")
+    .select("*")
+    .in("cooking_history_id", historyIds)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addCookingPhoto(
+  userId: string,
+  cookingHistoryId: string,
+  bucket: string,
+  path: string,
+) {
+  const { data, error } = await supabase
+    .from("cooking_photos")
+    .insert({
+      user_id: userId,
+      cooking_history_id: cookingHistoryId,
+      storage_bucket: bucket,
+      storage_path: path,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+export async function deleteCookingPhotoMetadata(photoId: string) {
+  const { error } = await supabase.from("cooking_photos").delete().eq("id", photoId);
+  if (error) throw error;
+}
+
+// Promotes a cooking photo to be the recipe's cover — a metadata reference
+// change only; the underlying Storage object is never copied or duplicated.
+export async function setCookingPhotoAsCover(
+  recipeId: string,
+  photo: Pick<CookingPhoto, "id" | "storage_bucket" | "storage_path">,
+) {
+  const { error } = await supabase
+    .from("recipes")
+    .update({
+      cover_storage_bucket: photo.storage_bucket,
+      cover_storage_path: photo.storage_path,
+      cover_source: "cooking_photo",
+      cover_cooking_photo_id: photo.id,
+    })
+    .eq("id", recipeId);
+  if (error) throw error;
+}
+
+// Clears cover metadata only on whichever recipe (if any) currently points
+// its cover_cooking_photo_id at this exact photo — a no-op if no recipe
+// does. Called before deleting a cooking photo so a deletion of a photo
+// that ISN'T the active cover never touches an unrelated recipe.
+export async function clearRecipeCoverIfMatchesCookingPhoto(photoId: string) {
+  const { error } = await supabase
+    .from("recipes")
+    .update({
+      cover_storage_bucket: null,
+      cover_storage_path: null,
+      cover_source: null,
+      cover_cooking_photo_id: null,
+    })
+    .eq("cover_cooking_photo_id", photoId);
+  if (error) throw error;
+}
+
 export async function archiveRecipe(id: string) {
   const { error } = await supabase
     .from("recipes")
