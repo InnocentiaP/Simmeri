@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      canonical_ingredients: {
+        Row: {
+          canonical_key: string
+          canonical_name: string
+          category: string | null
+          created_at: string
+          id: string
+          ingredient_state: string | null
+          merged_into_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_key: string
+          canonical_name: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          ingredient_state?: string | null
+          merged_into_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_key?: string
+          canonical_name?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          ingredient_state?: string | null
+          merged_into_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       collection_recipes: {
         Row: {
           collection_id: string
@@ -140,6 +176,54 @@ export type Database = {
           email?: string
           id?: string
           source?: string
+        }
+        Relationships: []
+      }
+      ingredient_aliases: {
+        Row: {
+          alias_type: string
+          canonical_ingredient_id: string
+          confidence: number | null
+          created_at: string
+          display_alias: string
+          id: string
+          language_code: string | null
+          normalized_alias: string
+          owner_user_id: string | null
+          region_code: string | null
+          review_status: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          alias_type?: string
+          canonical_ingredient_id: string
+          confidence?: number | null
+          created_at?: string
+          display_alias: string
+          id?: string
+          language_code?: string | null
+          normalized_alias: string
+          owner_user_id?: string | null
+          region_code?: string | null
+          review_status?: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          alias_type?: string
+          canonical_ingredient_id?: string
+          confidence?: number | null
+          created_at?: string
+          display_alias?: string
+          id?: string
+          language_code?: string | null
+          normalized_alias?: string
+          owner_user_id?: string | null
+          region_code?: string | null
+          review_status?: string
+          source?: string
+          updated_at?: string
         }
         Relationships: []
       }

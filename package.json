@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "node --test src/lib/*.test.ts src/lib/media/*.test.ts src/lib/import/*.test.ts"
+    "test": "node --test src/lib/*.test.ts src/lib/media/*.test.ts src/lib/import/*.test.ts src/lib/ingredients/*.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
