@@ -11,7 +11,12 @@ import {
   listCookingPhotosForHistoryIds,
 } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
-import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
+import {
+  computeReadiness,
+  readinessDisplay,
+  readinessTone,
+  shouldShowAddMissingIngredientsAction,
+} from "@/lib/readiness";
 import { shouldShowSourceLink, safeHostname } from "@/lib/url-safety";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
 import { CoverPhotoUploader } from "@/components/app/CoverPhotoUploader";
@@ -237,13 +242,6 @@ function RecipeDetail() {
           >
             <CalendarPlus className="h-3.5 w-3.5" /> Add to Meal Plan
           </button>
-          <button
-            type="button"
-            onClick={handleGenerateShoppingItems}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/40"
-          >
-            <ShoppingCart className="h-3.5 w-3.5" /> Add missing ingredients
-          </button>
           <Link
             to="/app/recipes/$recipeId/edit"
             params={{ recipeId }}
@@ -329,11 +327,22 @@ function RecipeDetail() {
       )}
 
       <section className={`mb-6 rounded-3xl border p-5 ${readinessTone(readiness.label)}`}>
-        <div className="flex items-center gap-3">
-          <span className="rounded-full border bg-background px-3 py-1 text-sm font-medium">
-            {readinessDisplay(readiness.label)}
-          </span>
-          <span className="text-sm">{readiness.short}</span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-full border bg-background px-3 py-1 text-sm font-medium">
+              {readinessDisplay(readiness.label)}
+            </span>
+            <span className="text-sm">{readiness.short}</span>
+          </div>
+          {shouldShowAddMissingIngredientsAction(readiness.label) && (
+            <button
+              type="button"
+              onClick={handleGenerateShoppingItems}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs text-cocoa hover:bg-cream-deep/40"
+            >
+              <ShoppingCart className="h-3 w-3" /> Add missing ingredients
+            </button>
+          )}
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
           <ExpList label="Available" items={readiness.explanation.available} />
