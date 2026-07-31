@@ -6,31 +6,15 @@ import { stripHtmlToReadableText } from "./html-to-text";
 import { callGeminiForRecipeExtraction } from "./gemini-client.server";
 import { parseAiRecipeDraft } from "./ai-draft-schema";
 import { normalizeAiDraftToFormValues, type NormalizedRecipeDraft } from "./ai-normalize";
+import { isAiRateLimited } from "./ai-rate-limit.server";
+import {
+  mapGeminiErrorToUserMessage,
+  AI_MALFORMED_RESPONSE_MESSAGE,
+  AI_RATE_LIMIT_EXCEEDED_MESSAGE,
+} from "./gemini-error-messages";
 
 const MAX_PASTE_CHARS = 20_000;
 const MAX_EXTRACTED_CHARS = 12_000;
-
-// Best-effort, in-memory, per-user rate limiter — explicitly NOT a durable
-// quota system (see plan section H). Resets on cold start and is not shared
-// across concurrent serverless instances; it is a soft speed-bump, not an
-// enforced limit. Upgrading to a persisted (e.g. Supabase) usage counter is
-// the natural next step if real abuse is ever observed — deliberately not
-// built now, per the "smallest practical" instruction.
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const RATE_LIMIT_MAX_CALLS = 10;
-const callHistory = new Map<string, number[]>();
-
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  const recent = (callHistory.get(userId) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  if (recent.length >= RATE_LIMIT_MAX_CALLS) {
-    callHistory.set(userId, recent);
-    return true;
-  }
-  recent.push(now);
-  callHistory.set(userId, recent);
-  return false;
-}
 
 const requestSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -63,10 +47,8 @@ export const improveRecipeDraftWithAI = createServerFn({ method: "POST" })
   .validator(requestSchema)
   .handler(async ({ data, context }): Promise<ImproveRecipeDraftWithAiResult> => {
     const userId = (context as { userId: string }).userId;
-    if (isRateLimited(userId)) {
-      throw new Error(
-        "You've reached the AI assistance limit for now — try again shortly, or continue editing manually.",
-      );
+    if (isAiRateLimited(userId)) {
+      throw new Error(AI_RATE_LIMIT_EXCEEDED_MESSAGE);
     }
 
     let cleanedText: string;
@@ -83,27 +65,12 @@ export const improveRecipeDraftWithAI = createServerFn({ method: "POST" })
 
     const geminiResult = await callGeminiForRecipeExtraction(cleanedText);
     if (!geminiResult.ok) {
-      switch (geminiResult.category) {
-        case "not_configured":
-          throw new Error("AI recipe assistance isn't configured yet.");
-        case "timeout":
-        case "network":
-          throw new Error(
-            "The AI assistant took too long to respond. Try again or keep your current draft.",
-          );
-        case "rate_limited":
-          throw new Error("The AI assistant is busy right now. Try again in a moment.");
-        case "upstream_error":
-        default:
-          throw new Error("The AI assistant is temporarily unavailable.");
-      }
+      throw new Error(mapGeminiErrorToUserMessage(geminiResult.category));
     }
 
     const parsed = parseAiRecipeDraft(geminiResult.rawText);
     if (!parsed.ok) {
-      throw new Error(
-        "The AI assistant returned an unexpected response. Try again or keep your current draft.",
-      );
+      throw new Error(AI_MALFORMED_RESPONSE_MESSAGE);
     }
 
     const draft = normalizeAiDraftToFormValues(parsed.draft);

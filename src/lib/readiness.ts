@@ -173,6 +173,23 @@ export function readinessTone(label: ReadinessLabel): string {
   }
 }
 
+// Whether "Add missing ingredients" should be offered for this readiness
+// result. Reuses the existing label directly rather than re-deriving from
+// explanation arrays: not_ready and needs_shopping are exactly the two
+// labels driven by a non-empty missing_core/missing_supporting/
+// missing_seasoning bucket (see computeReadiness above) — the same
+// non-optional "missing" ingredients that Shopping Generation includes by
+// default (see shopping-generate.ts's isIncludedByDefault: missing is always
+// included, running_low/needs_check require an explicit opt-in toggle).
+// Optional ingredients never reach those buckets (they go to
+// ignored_optional instead), so a recipe with only optional gaps never
+// trips this; check_first/almost_ready/ready_to_cook are excluded since
+// their underlying needs_check/running_low ingredients are not part of the
+// default generated candidate list either.
+export function shouldShowAddMissingIngredientsAction(label: ReadinessLabel): boolean {
+  return label === "not_ready" || label === "needs_shopping";
+}
+
 function shortLabel(label: ReadinessLabel, exp: ReadinessExplanation): string {
   switch (label) {
     case "ready_to_cook":

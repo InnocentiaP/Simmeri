@@ -1,4 +1,10 @@
-import { buildGeminiPrompt, SYSTEM_INSTRUCTION, GEMINI_RESPONSE_SCHEMA } from "./gemini-prompt";
+import {
+  buildGeminiPrompt,
+  SYSTEM_INSTRUCTION,
+  GEMINI_RESPONSE_SCHEMA,
+  buildGeminiEditPrompt,
+  EDIT_SYSTEM_INSTRUCTION,
+} from "./gemini-prompt";
 
 // Model configuration is isolated here and never accepted from a request
 // body — matches the PRD's "price identifiers/plan mappings must not be
@@ -40,13 +46,25 @@ export type GeminiCallResult =
 
 // Direct REST call (no SDK — see plan section D) to Gemini's generateContent
 // endpoint. systemInstruction carries every behavior rule; contents carries
-// only the already-cleaned/truncated recipe text (never a URL, never other
-// user data). No automatic retry — a single manual "Try again" is exposed to
-// the user instead (see recipe-ai-import.functions.ts / the review UI).
-export async function callGeminiForRecipeExtraction(cleanedText: string): Promise<GeminiCallResult> {
+// only the caller-supplied prompt text (already-cleaned/truncated page text
+// for extraction, or a serialized current-recipe JSON for cleanup — never a
+// URL, never other user data). No automatic retry — a single manual "Try
+// again" is exposed to the user instead (see recipe-ai-import.functions.ts /
+// recipe-ai-edit.functions.ts and their review UIs).
+//
+// Shared by both AI Recipe entry points (Import's extraction and Edit's
+// cleanup) — model/endpoint/timeout/output-token cap, the fetch call itself,
+// and every error category below are identical for both; only which
+// systemInstruction/prompt pair is sent differs, via the two thin wrappers
+// beneath this function.
+async function callGemini(
+  systemInstruction: string,
+  userPrompt: string,
+  logLabel: string,
+): Promise<GeminiCallResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    devLog("missing GEMINI_API_KEY");
+    devLog(logLabel, "missing GEMINI_API_KEY");
     return { ok: false, category: "not_configured" };
   }
 
@@ -62,8 +80,8 @@ export async function callGeminiForRecipeExtraction(cleanedText: string): Promis
         signal: controller.signal,
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          systemInstruction: { role: "system", parts: [{ text: SYSTEM_INSTRUCTION }] },
-          contents: [{ role: "user", parts: [{ text: buildGeminiPrompt(cleanedText) }] }],
+          systemInstruction: { role: "system", parts: [{ text: systemInstruction }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
           generationConfig: {
             responseMimeType: "application/json",
             responseSchema: GEMINI_RESPONSE_SCHEMA,
@@ -76,30 +94,48 @@ export async function callGeminiForRecipeExtraction(cleanedText: string): Promis
     const durationMs = Date.now() - startedAt;
 
     if (response.status === 429) {
-      devLog("rate limited by Gemini", { durationMs });
+      devLog(logLabel, "rate limited by Gemini", { durationMs });
       return { ok: false, category: "rate_limited" };
     }
     if (!response.ok) {
-      devLog("non-2xx response from Gemini", { status: response.status, durationMs });
+      devLog(logLabel, "non-2xx response from Gemini", { status: response.status, durationMs });
       return { ok: false, category: "upstream_error" };
     }
 
     const json = (await response.json()) as GeminiGenerateContentResponse;
     const rawText = extractResponseText(json);
     if (!rawText) {
-      devLog("Gemini returned no usable text", { durationMs });
+      devLog(logLabel, "Gemini returned no usable text", { durationMs });
       return { ok: false, category: "upstream_error" };
     }
 
-    devLog("success", { model: GEMINI_MODEL, durationMs });
+    devLog(logLabel, "success", { model: GEMINI_MODEL, durationMs });
     return { ok: true, rawText, model: GEMINI_MODEL };
   } catch (err) {
     clearTimeout(timer);
     if (controller.signal.aborted) {
-      devLog("timeout after", GEMINI_TIMEOUT_MS, "ms");
+      devLog(logLabel, "timeout after", GEMINI_TIMEOUT_MS, "ms");
       return { ok: false, category: "timeout" };
     }
-    devLog("network error", err instanceof Error ? err.message : String(err));
+    devLog(logLabel, "network error", err instanceof Error ? err.message : String(err));
     return { ok: false, category: "network" };
   }
+}
+
+// Used by the deterministic-import "Improve with AI" flow. Behavior is
+// unchanged from before this function was factored out of a single
+// monolithic implementation — same model, endpoint, timeout, prompt, and
+// error mapping.
+export async function callGeminiForRecipeExtraction(cleanedText: string): Promise<GeminiCallResult> {
+  return callGemini(SYSTEM_INSTRUCTION, buildGeminiPrompt(cleanedText), "extraction");
+}
+
+// Used by the Edit Recipe "Clean up with AI" flow. recipeJson is the
+// caller's already-serialized current-recipe payload (see
+// buildAiEditRequestPayload in ./ai-normalize.ts) — this function performs
+// no serialization itself, matching callGeminiForRecipeExtraction's own
+// separation between prompt-building (./gemini-prompt.ts) and the network
+// call.
+export async function callGeminiForRecipeCleanup(recipeJson: string): Promise<GeminiCallResult> {
+  return callGemini(EDIT_SYSTEM_INSTRUCTION, buildGeminiEditPrompt(recipeJson), "cleanup");
 }

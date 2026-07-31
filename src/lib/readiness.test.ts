@@ -5,6 +5,7 @@ import {
   readinessDisplay,
   buildKitchenPresenceIndex,
   classifyIngredientPresence,
+  shouldShowAddMissingIngredientsAction,
   type ReadinessIngredient,
   type ReadinessKitchenItem,
 } from "./readiness.ts";
@@ -89,6 +90,56 @@ describe("computeReadiness (regression)", () => {
     const kitchen: ReadinessKitchenItem[] = [{ ingredient_name: "eggs", status: "available" }];
     const result = computeReadiness(ingredients, kitchen);
     assert.equal(result.label, "ready_to_cook");
+  });
+});
+
+describe("shouldShowAddMissingIngredientsAction", () => {
+  it("is visible for not_ready (a core ingredient is missing)", () => {
+    assert.equal(shouldShowAddMissingIngredientsAction("not_ready"), true);
+  });
+
+  it("is visible for needs_shopping (a supporting/seasoning ingredient is missing)", () => {
+    assert.equal(shouldShowAddMissingIngredientsAction("needs_shopping"), true);
+  });
+
+  it("is hidden for check_first, almost_ready, and ready_to_cook", () => {
+    assert.equal(shouldShowAddMissingIngredientsAction("check_first"), false);
+    assert.equal(shouldShowAddMissingIngredientsAction("almost_ready"), false);
+    assert.equal(shouldShowAddMissingIngredientsAction("ready_to_cook"), false);
+  });
+
+  it("is visible end-to-end when an actionable core ingredient is missing", () => {
+    const ingredients: ReadinessIngredient[] = [{ display_name: "chicken", importance: "core" }];
+    const result = computeReadiness(ingredients, []);
+    assert.equal(shouldShowAddMissingIngredientsAction(result.label), true);
+  });
+
+  it("is visible end-to-end when an actionable supporting ingredient is missing", () => {
+    const ingredients: ReadinessIngredient[] = [
+      { display_name: "chicken", importance: "core" },
+      { display_name: "onion", importance: "supporting" },
+    ];
+    const kitchen: ReadinessKitchenItem[] = [{ ingredient_name: "chicken", status: "available" }];
+    const result = computeReadiness(ingredients, kitchen);
+    assert.equal(shouldShowAddMissingIngredientsAction(result.label), true);
+  });
+
+  it("is hidden end-to-end when the recipe is fully ready", () => {
+    const ingredients: ReadinessIngredient[] = [{ display_name: "eggs", importance: "core" }];
+    const kitchen: ReadinessKitchenItem[] = [{ ingredient_name: "eggs", status: "available" }];
+    const result = computeReadiness(ingredients, kitchen);
+    assert.equal(shouldShowAddMissingIngredientsAction(result.label), false);
+  });
+
+  it("is hidden end-to-end when only an optional ingredient is missing", () => {
+    const ingredients: ReadinessIngredient[] = [
+      { display_name: "eggs", importance: "core" },
+      { display_name: "chives", importance: "optional" },
+    ];
+    const kitchen: ReadinessKitchenItem[] = [{ ingredient_name: "eggs", status: "available" }];
+    const result = computeReadiness(ingredients, kitchen);
+    assert.equal(result.label, "ready_to_cook");
+    assert.equal(shouldShowAddMissingIngredientsAction(result.label), false);
   });
 });
 
