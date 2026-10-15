@@ -265,7 +265,7 @@ function EmptyState() {
     <div className="flex flex-col items-center rounded-3xl border border-dashed border-border bg-cream/40 p-8 text-center">
       <ChefHat className="mb-3 h-8 w-8 text-olive-deep" />
       <h3 className="font-display text-lg font-semibold text-cocoa">No recipes yet</h3>
-      <p className="mt-1 max-w-sm text-sm text-cocoa/70">Add your first recipe and Simi will help you see what you can cook tonight.</p>
+      <p className="mt-1 max-w-sm text-sm text-cocoa/70">Add your first recipe and Meri will help you see what you can cook tonight.</p>
       <Link
         to="/app/recipes/new"
         className="mt-4 rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-olive"

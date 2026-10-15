@@ -88,7 +88,7 @@ The existing Simmeri identity is approved:
 - warm cream, beige, caramel, cocoa, terracotta, olive, and sage
 - editorial serif headings with readable sans-serif UI text
 - soft rounded cards, restrained shadows, warm surfaces
-- Simi used selectively as a helper
+- Meri used selectively as a helper
 - responsive desktop, tablet, and mobile behavior
 
 Claude Code is the primary implementation tool. Antigravity is the later visual-review and polish tool. Visual polish must not be performed concurrently on the same branch while Claude is implementing the same feature.

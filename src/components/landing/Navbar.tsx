@@ -33,8 +33,8 @@ export function Navbar() {
         >
           <a href="#top" className="flex min-w-0 shrink items-center gap-2.5">
             <img
-              src="/images/simmeri/simi-logo.png"
-              alt="Simi mark"
+              src="/images/simmeri/meri-logo.png"
+              alt="Meri mark"
               className="h-11 w-auto shrink-0 object-contain -my-1.5"
               draggable={false}
             />

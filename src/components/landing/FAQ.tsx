@@ -27,8 +27,8 @@ const items = [
     a: "Your saved recipes and plans stay readable. Syncing happens when you're back online.",
   },
   {
-    q: "Is Simi always this cheerful?",
-    a: "Almost. Simi is curious, warm, and a little sparkly — never judgmental about last night's takeout.",
+    q: "Is Meri always this cheerful?",
+    a: "Almost. Meri is curious, warm, and a little sparkly — never judgmental about last night's takeout.",
   },
   {
     q: "How much will Simmeri cost?",

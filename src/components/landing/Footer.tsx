@@ -1,4 +1,4 @@
-import { SimiSpot } from "./SimiSpot";
+import { MeriSpot } from "./MeriSpot";
 
 export function Footer() {
   return (
@@ -6,7 +6,7 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div className="flex items-center gap-3">
-            <SimiSpot pose="sleepy" size={54} alt="Simi napping in a green nightcap" />
+            <MeriSpot pose="sleepy" size={54} alt="Meri napping in a green nightcap" />
             <div>
               <p className="font-display text-2xl text-cream">Simmeri</p>
               <p className="text-sm text-cream/70">Your cozy cooking companion.</p>

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { SimiSpot } from "./SimiSpot";
+import { MeriSpot } from "./MeriSpot";
 
 const emailSchema = z
   .string()
@@ -49,7 +49,7 @@ export function EarlyAccessForm() {
   if (status === "success" || status === "already") {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 rounded-3xl border border-border/70 bg-background/80 p-8 text-center shadow-[var(--shadow-soft)]">
-        <SimiSpot pose={status === "success" ? "success" : "proud"} size={110} />
+        <MeriSpot pose={status === "success" ? "success" : "proud"} size={110} />
         <div>
           <p className="font-display text-2xl text-coffee">
             {status === "success"
@@ -58,8 +58,8 @@ export function EarlyAccessForm() {
           </p>
           <p className="mt-1 text-base text-cocoa/85">
             {status === "success"
-              ? "Simi will send a note when it's time to start cooking."
-              : "Simi remembers you — we'll be in touch soon."}
+              ? "Meri will send a note when it's time to start cooking."
+              : "Meri remembers you — we'll be in touch soon."}
           </p>
         </div>
       </div>

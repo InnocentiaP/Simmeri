@@ -10,14 +10,14 @@ const steps = [
   },
   {
     tag: "02 · Kitchen check-in",
-    title: "Tell Simi what's on your shelves.",
+    title: "Tell Meri what's on your shelves.",
     body: "A quick tap says 'good', 'running low', or 'out'. That's all Simmeri needs to know what you can cook tonight — no scales, no barcodes.",
     vignette: "kitchen" as const,
   },
   {
     tag: "03 · Decide with Tonight's Deck",
     title: "Three cozy ideas. One clear pick.",
-    body: "Simi hands you a short deck of recipes ready with what you already have, plus a couple that only need one thing. Swipe, save, or cook.",
+    body: "Meri hands you a short deck of recipes ready with what you already have, plus a couple that only need one thing. Swipe, save, or cook.",
     vignette: "deck" as const,
   },
   {
@@ -45,7 +45,7 @@ function Vignette({ kind }: { kind: (typeof steps)[number]["vignette"] }) {
           <div className="flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-caramel" />
             <p className="text-[11px] font-semibold uppercase tracking-widest text-caramel">
-              Simi parsed this recipe
+              Meri parsed this recipe
             </p>
           </div>
           <p className="mt-2 font-display text-lg text-coffee">Creamy mushroom pasta</p>

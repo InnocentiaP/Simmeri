@@ -66,7 +66,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
             {openMobile ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
           <Link to="/app" className="flex items-center gap-2">
-            <img src="/images/simmeri/simi-logo.png" alt="Simmeri" className="h-8 w-auto" />
+            <img src="/images/simmeri/meri-logo.png" alt="Simmeri" className="h-8 w-auto" />
             <span className="font-display text-lg font-semibold text-olive-deep">Simmeri</span>
           </Link>
         </div>

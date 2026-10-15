@@ -26,11 +26,11 @@ interface Props {
   className?: string;
 }
 
-export function SimiSpot({ pose, size = 96, alt, className }: Props) {
+export function MeriSpot({ pose, size = 96, alt, className }: Props) {
   return (
     <img
-      src="/images/simmeri/simi-head.png"
-      alt={alt ?? `Simi the kitchen duck${pose ? ` — ${pose}` : ""}`}
+      src="/images/simmeri/meri-head.png"
+      alt={alt ?? `Meri the kitchen duck${pose ? ` — ${pose}` : ""}`}
       width={size}
       height={size}
       className={className}

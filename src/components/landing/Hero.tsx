@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from "motion/react";
 import pastaImg from "/images/simmeri/creamy-mushroom-pasta.jpg?url";
-import { SimiSpot } from "./SimiSpot";
+import { MeriSpot } from "./MeriSpot";
 
 export function Hero() {
   const reduce = useReducedMotion();
@@ -72,7 +72,7 @@ export function Hero() {
             </div>
 
             <div className="mt-4 flex items-start gap-3 rounded-2xl bg-duck/20 p-3">
-              <SimiSpot pose="excited" size={44} />
+              <MeriSpot pose="excited" size={44} />
               <p className="text-sm leading-snug text-cocoa">
                 You have <b>three dinner ideas</b> ready with what&rsquo;s already in
                 your kitchen.
@@ -159,10 +159,10 @@ export function Hero() {
             Only 2 missing
           </motion.div>
 
-          {/* Simi hero */}
+          {/* Meri hero */}
           <motion.img
-            src="/images/simmeri/simi-fullbody.png"
-            alt="Simi the kitchen duck holding a wooden spoon and a My Recipes notebook"
+            src="/images/simmeri/meri-fullbody.png"
+            alt="Meri the kitchen duck holding a wooden spoon and a My Recipes notebook"
             className="pointer-events-none absolute -bottom-16 -left-38 hidden h-60 w-auto drop-shadow-[0_16px_20px_rgba(62,42,33,0.25)] md:block lg:-left-42"
             initial={reduce ? undefined : { y: 0 }}
             animate={reduce ? undefined : { y: [0, -8, 0] }}

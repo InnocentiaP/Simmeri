@@ -39,7 +39,7 @@ function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to keep cooking with Simi.">
+    <AuthLayout title="Welcome back" subtitle="Sign in to keep cooking with Meri.">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-cocoa">Email</span>

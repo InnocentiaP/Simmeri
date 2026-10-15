@@ -5,7 +5,7 @@ const points = [
   { icon: Lock, title: "Your recipes stay yours.", body: "Private by default. Nothing shared without you." },
   { icon: Shield, title: "No ads, no reselling.", body: "Simmeri isn't paid to point you at any brand." },
   { icon: Download, title: "Export anytime.", body: "Take your library, plans, and photos with you." },
-  { icon: Sparkles, title: "Gentle helpers, not push notifications.", body: "Simi nudges quietly, never bosses." },
+  { icon: Sparkles, title: "Gentle helpers, not push notifications.", body: "Meri nudges quietly, never bosses." },
 ];
 
 export function Trust() {

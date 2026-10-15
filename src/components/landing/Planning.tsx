@@ -1,4 +1,4 @@
-import { SimiSpot } from "./SimiSpot";
+import { MeriSpot } from "./MeriSpot";
 import pancakesImg from "/images/simmeri/banana-oat-pancakes.jpg?url";
 import tomatoImg from "/images/simmeri/roasted-tomato-soup.jpg?url";
 import curryImg from "/images/simmeri/vegetable-curry.jpg?url";
@@ -85,7 +85,7 @@ export function Planning() {
               ))}
             </div>
             <div className="mt-5 flex items-center gap-3 rounded-2xl bg-cream/60 p-3">
-              <SimiSpot pose="tip" size={56} alt="Simi with a helpful tip" />
+              <MeriSpot pose="tip" size={56} alt="Meri with a helpful tip" />
               <p className="text-sm text-cocoa/85">
                 Only <b>3 items</b> to buy for this week. A little planning, a much calmer
                 week.

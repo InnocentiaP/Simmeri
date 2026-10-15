@@ -31,7 +31,7 @@ export function TonightsDeck() {
             Three ideas. A little breath. Dinner decided.
           </h2>
           <p className="mt-5 max-w-lg text-lg leading-relaxed text-cream/85">
-            When you don&rsquo;t know what to cook, Simi hands you a short deck instead of an
+            When you don&rsquo;t know what to cook, Meri hands you a short deck instead of an
             endless feed. Skip what doesn&rsquo;t feel right, shortlist what does, or send it
             straight to the pan.
           </p>
@@ -147,7 +147,7 @@ export function TonightsDeck() {
           </div>
 
           <img
-            src="/images/simmeri/simi-fullbody.png"
+            src="/images/simmeri/meri-fullbody.png"
             alt=""
             aria-hidden
             className="pointer-events-none absolute -bottom-6 -right-4 h-32 w-auto rotate-6 drop-shadow-[0_16px_20px_rgba(0,0,0,0.35)] sm:h-40"
