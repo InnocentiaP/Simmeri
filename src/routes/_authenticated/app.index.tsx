@@ -5,6 +5,7 @@ import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readine
 import { BookOpen, Plus, Refrigerator, ChefHat, CalendarDays, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
+import { TonightPicks } from "@/components/app/deck/TonightPicks";
 import { formatDateKey, addDays } from "@/lib/date-range";
 
 export const Route = createFileRoute("/_authenticated/app/")({
@@ -109,6 +110,8 @@ function Dashboard() {
           hint={unpurchasedShoppingCount > 0 ? `${unpurchasedShoppingCount} to buy` : undefined}
         />
       </div>
+
+      <TonightPicks />
 
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between">

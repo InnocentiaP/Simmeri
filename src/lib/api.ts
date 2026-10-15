@@ -339,6 +339,20 @@ export async function updateCookingHistoryEntry(
   if (error) throw error;
 }
 
+// Every cooking event for the current user, reduced to the three columns
+// recommendations need (see summarizeCookingHistory). One query instead of
+// one per recipe.
+export async function listCookingHistorySummaryRows(): Promise<
+  Pick<CookingHistory, "recipe_id" | "cooked_at" | "rating">[]
+> {
+  const { data, error } = await supabase
+    .from("cooking_history")
+    .select("recipe_id, cooked_at, rating")
+    .order("cooked_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function deleteCookingHistoryEntry(historyId: string) {
   const { error } = await supabase.from("cooking_history").delete().eq("id", historyId);
   if (error) throw error;

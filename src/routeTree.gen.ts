@@ -20,6 +20,7 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppKitchenRouteImport } from './routes/_authenticated/app.kitchen'
 import { Route as AuthenticatedAppPlannerRouteImport } from './routes/_authenticated/app.planner'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
+import { Route as AuthenticatedAppTonightRouteImport } from './routes/_authenticated/app.tonight'
 import { Route as AuthenticatedAppCollectionsIndexRouteImport } from './routes/_authenticated/app.collections.index'
 import { Route as AuthenticatedAppCollectionsCollectionIdRouteImport } from './routes/_authenticated/app.collections.$collectionId'
 import { Route as AuthenticatedAppRecipesIndexRouteImport } from './routes/_authenticated/app.recipes.index'
@@ -85,6 +86,11 @@ const AuthenticatedAppSettingsRoute =
     path: '/app/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAppTonightRoute = AuthenticatedAppTonightRouteImport.update({
+  id: '/app/tonight',
+  path: '/app/tonight',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAppCollectionsIndexRoute =
   AuthenticatedAppCollectionsIndexRouteImport.update({
     id: '/app/collections/',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/app/kitchen': typeof AuthenticatedAppKitchenRoute
   '/app/planner': typeof AuthenticatedAppPlannerRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/tonight': typeof AuthenticatedAppTonightRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/app/kitchen': typeof AuthenticatedAppKitchenRoute
   '/app/planner': typeof AuthenticatedAppPlannerRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/tonight': typeof AuthenticatedAppTonightRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/_authenticated/app/kitchen': typeof AuthenticatedAppKitchenRoute
   '/_authenticated/app/planner': typeof AuthenticatedAppPlannerRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/tonight': typeof AuthenticatedAppTonightRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/collections/$collectionId': typeof AuthenticatedAppCollectionsCollectionIdRoute
   '/_authenticated/app/recipes/import': typeof AuthenticatedAppRecipesImportRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/app/kitchen'
     | '/app/planner'
     | '/app/settings'
+    | '/app/tonight'
     | '/app/'
     | '/app/collections/$collectionId'
     | '/app/recipes/import'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/app/kitchen'
     | '/app/planner'
     | '/app/settings'
+    | '/app/tonight'
     | '/app'
     | '/app/collections/$collectionId'
     | '/app/recipes/import'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/kitchen'
     | '/_authenticated/app/planner'
     | '/_authenticated/app/settings'
+    | '/_authenticated/app/tonight'
     | '/_authenticated/app/'
     | '/_authenticated/app/collections/$collectionId'
     | '/_authenticated/app/recipes/import'
@@ -361,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app/tonight': {
+      id: '/_authenticated/app/tonight'
+      path: '/app/tonight'
+      fullPath: '/app/tonight'
+      preLoaderRoute: typeof AuthenticatedAppTonightRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/app/collections/': {
       id: '/_authenticated/app/collections/'
       path: '/app/collections'
@@ -431,6 +450,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppKitchenRoute: typeof AuthenticatedAppKitchenRoute
   AuthenticatedAppPlannerRoute: typeof AuthenticatedAppPlannerRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppTonightRoute: typeof AuthenticatedAppTonightRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppCollectionsCollectionIdRoute: typeof AuthenticatedAppCollectionsCollectionIdRoute
   AuthenticatedAppRecipesImportRoute: typeof AuthenticatedAppRecipesImportRoute
@@ -447,6 +467,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppKitchenRoute: AuthenticatedAppKitchenRoute,
   AuthenticatedAppPlannerRoute: AuthenticatedAppPlannerRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppTonightRoute: AuthenticatedAppTonightRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppCollectionsCollectionIdRoute:
     AuthenticatedAppCollectionsCollectionIdRoute,

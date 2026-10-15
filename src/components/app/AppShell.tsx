@@ -11,6 +11,7 @@ import {
   FolderOpen,
   CalendarDays,
   ShoppingCart,
+  Sparkles,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,11 +20,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 // Ordered so the mobile bottom nav's slice(0, 5) below shows the five
-// highest-frequency items (the core Plan/Shop/Cook loop) — Collections, Add
+// highest-frequency items (Decide/Plan/Cook) — Shopping, Collections, Add
 // Recipe, and Settings are still fully reachable via the drawer and the
 // desktop sidebar, just not the mobile bottom bar.
 const nav = [
   { to: "/app" as const, label: "Home", icon: Home, exact: true },
+  { to: "/app/tonight" as const, label: "Tonight", icon: Sparkles, exact: true },
   { to: "/app/recipes" as const, label: "My Recipes", icon: BookOpen, exact: false },
   { to: "/app/planner" as const, label: "Meal Plan", icon: CalendarDays, exact: false },
   { to: "/app/kitchen" as const, label: "Kitchen", icon: Refrigerator, exact: true },
