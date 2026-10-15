@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
 import type { GenerationPayloadItem } from "@/lib/shopping-generate";
+import type { CookingRating } from "@/lib/cooking-rating";
 
 export type Recipe = Database["public"]["Tables"]["recipes"]["Row"];
 export type RecipeIngredient = Database["public"]["Tables"]["recipe_ingredients"]["Row"];
@@ -293,6 +294,7 @@ export interface CookingHistoryCreateInput {
   cookedAt: string;
   servingsMade: number | null;
   notes: string | null;
+  rating: CookingRating | null;
 }
 
 export async function createCookingHistoryEntry(input: CookingHistoryCreateInput) {
@@ -304,6 +306,7 @@ export async function createCookingHistoryEntry(input: CookingHistoryCreateInput
       cooked_at: input.cookedAt,
       servings_made: input.servingsMade,
       notes: input.notes,
+      rating: input.rating,
     })
     .select("id")
     .single();
@@ -315,6 +318,7 @@ export interface CookingHistoryUpdateInput {
   cookedAt: string;
   servingsMade: number | null;
   notes: string | null;
+  rating: CookingRating | null;
 }
 
 // Only ever touches cooking_history — never the originating recipe's own
@@ -329,6 +333,7 @@ export async function updateCookingHistoryEntry(
       cooked_at: input.cookedAt,
       servings_made: input.servingsMade,
       notes: input.notes,
+      rating: input.rating,
     })
     .eq("id", historyId);
   if (error) throw error;
@@ -423,6 +428,13 @@ export async function archiveRecipe(id: string) {
 }
 export async function unarchiveRecipe(id: string) {
   const { error } = await supabase.from("recipes").update({ archived_at: null }).eq("id", id);
+  if (error) throw error;
+}
+export async function setRecipeFavorite(id: string, favorite: boolean) {
+  const { error } = await supabase
+    .from("recipes")
+    .update({ favorited_at: favorite ? new Date().toISOString() : null })
+    .eq("id", id);
   if (error) throw error;
 }
 export async function deleteRecipe(id: string) {

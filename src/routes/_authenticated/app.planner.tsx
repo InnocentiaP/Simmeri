@@ -28,6 +28,7 @@ import {
 import { RecipePicker } from "@/components/app/RecipePicker";
 import { MealPlanEntryForm } from "@/components/app/MealPlanEntryForm";
 import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
+import { PostCookKitchenDialog } from "@/components/app/PostCookKitchenDialog";
 import { MealPlanDayView } from "@/components/app/MealPlanDayView";
 import { MealPlanWeekView } from "@/components/app/MealPlanWeekView";
 import { ShoppingGenerationReview } from "@/components/app/ShoppingGenerationReview";
@@ -75,6 +76,7 @@ function PlannerPage() {
   const [entryForm, setEntryForm] = useState<EntryFormState | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<MealPlanEntry | null>(null);
   const [cookingEntry, setCookingEntry] = useState<MealPlanEntry | null>(null);
+  const [postCookRecipeId, setPostCookRecipeId] = useState<string | null>(null);
   const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(null);
 
   const { start, end } =
@@ -355,10 +357,17 @@ function PlannerPage() {
           onDone={() => {
             const entry = cookingEntry;
             setCookingEntry(null);
-            if (entry) cookMut.mutate(entry);
+            if (entry) {
+              cookMut.mutate(entry);
+              setPostCookRecipeId(entry.recipe_id);
+            }
           }}
           onClose={() => setCookingEntry(null)}
         />
+      )}
+
+      {postCookRecipeId && (
+        <PostCookKitchenDialog recipeId={postCookRecipeId} onClose={() => setPostCookRecipeId(null)} />
       )}
 
       {generatedCandidates && (

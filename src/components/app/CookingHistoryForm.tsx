@@ -11,6 +11,13 @@ import {
   addCookingPhoto,
   type CookingHistory,
 } from "@/lib/api";
+import {
+  COOKING_RATINGS,
+  cookingRatingEmoji,
+  cookingRatingLabel,
+  isCookingRating,
+  type CookingRating,
+} from "@/lib/cooking-rating";
 import { prepareImageForUpload, ImagePrepError } from "@/lib/media/image-compress";
 import { buildCookingPhotoPath, uploadRecipeMedia, RECIPE_MEDIA_BUCKET } from "@/lib/media/storage";
 
@@ -52,6 +59,10 @@ export function CookingHistoryForm({
 }: CookingHistoryFormProps) {
   const { user } = useAuth();
   const [files, setFiles] = useState<File[]>([]);
+  const [rating, setRating] = useState<CookingRating | null>(() => {
+    const initial = entry?.rating;
+    return isCookingRating(initial) ? initial : null;
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -87,6 +98,7 @@ export function CookingHistoryForm({
           cookedAt: cookedAtIso,
           servingsMade: values.servingsMade,
           notes,
+          rating,
         });
         toast.success("Cooking entry updated");
         onDone();
@@ -101,6 +113,7 @@ export function CookingHistoryForm({
         cookedAt: cookedAtIso,
         servingsMade: values.servingsMade,
         notes,
+        rating,
       });
 
       let failedCount = 0;
@@ -131,7 +144,14 @@ export function CookingHistoryForm({
       }
       onDone();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Couldn't save this cooking entry.");
+      // Supabase errors are plain objects with a message, not Error instances.
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error
+            ? String((error as { message: unknown }).message)
+            : null;
+      toast.error(message || "Couldn't save this cooking entry.");
     } finally {
       setSubmitting(false);
     }
@@ -160,6 +180,35 @@ export function CookingHistoryForm({
               <span className="text-xs text-terracotta">{errors.cookedAt.message}</span>
             )}
           </label>
+
+          <div className="flex flex-col gap-1 text-sm">
+            <span id="cooking-rating-label" className="font-medium text-cocoa">
+              How did it turn out? (optional)
+            </span>
+            <div role="radiogroup" aria-labelledby="cooking-rating-label" className="flex flex-wrap gap-1.5">
+              {COOKING_RATINGS.map((value) => {
+                const active = rating === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    // Clicking the active option again clears it.
+                    onClick={() => setRating(active ? null : value)}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors ${
+                      active
+                        ? "border-olive-deep bg-olive-deep text-primary-foreground"
+                        : "border-border bg-background text-cocoa hover:bg-cream-deep/40"
+                    }`}
+                  >
+                    <span aria-hidden="true">{cookingRatingEmoji(value)}</span>
+                    {cookingRatingLabel(value)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-cocoa">Servings made (optional)</span>

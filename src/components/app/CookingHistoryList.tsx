@@ -14,6 +14,7 @@ import {
   type CookingPhoto,
 } from "@/lib/api";
 import { removeRecipeMedia } from "@/lib/media/storage";
+import { cookingRatingEmoji, cookingRatingLabel, isCookingRating } from "@/lib/cooking-rating";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
 import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
 import {
@@ -202,11 +203,17 @@ export function CookingHistoryList({ recipeId, recipe }: CookingHistoryListProps
           <div key={entry.id} className="rounded-2xl border border-border/70 bg-background p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-medium text-cocoa">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-cocoa">
                   {new Date(entry.cooked_at).toLocaleString(undefined, {
                     dateStyle: "medium",
                     timeStyle: "short",
                   })}
+                  {isCookingRating(entry.rating) && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-caramel/40 bg-caramel/10 px-2 py-0.5 text-xs font-normal text-cocoa">
+                      <span aria-hidden="true">{cookingRatingEmoji(entry.rating)}</span>
+                      {cookingRatingLabel(entry.rating)}
+                    </span>
+                  )}
                 </p>
                 {entry.servings_made != null && (
                   <p className="text-xs text-cocoa/60">Servings made: {entry.servings_made}</p>

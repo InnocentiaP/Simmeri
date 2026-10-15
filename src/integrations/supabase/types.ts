@@ -104,6 +104,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          rating: string | null
           recipe_id: string
           servings_made: number | null
           updated_at: string
@@ -114,6 +115,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          rating?: string | null
           recipe_id: string
           servings_made?: number | null
           updated_at?: string
@@ -124,6 +126,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          rating?: string | null
           recipe_id?: string
           servings_made?: number | null
           updated_at?: string
@@ -429,6 +432,7 @@ export type Database = {
           cook_time_minutes: number | null
           created_at: string
           description: string | null
+          favorited_at: string | null
           id: string
           notes: string | null
           prep_time_minutes: number | null
@@ -448,6 +452,7 @@ export type Database = {
           cook_time_minutes?: number | null
           created_at?: string
           description?: string | null
+          favorited_at?: string | null
           id?: string
           notes?: string | null
           prep_time_minutes?: number | null
@@ -467,6 +472,7 @@ export type Database = {
           cook_time_minutes?: number | null
           created_at?: string
           description?: string | null
+          favorited_at?: string | null
           id?: string
           notes?: string | null
           prep_time_minutes?: number | null

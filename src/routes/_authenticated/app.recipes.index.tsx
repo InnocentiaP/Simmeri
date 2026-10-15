@@ -23,6 +23,7 @@ import {
   ListChecks,
   ShoppingCart,
   X,
+  Heart,
 } from "lucide-react";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
 import { ShoppingGenerationReview } from "@/components/app/ShoppingGenerationReview";
@@ -71,6 +72,7 @@ function useRecipesWithReadiness(includeArchived: boolean) {
 function RecipesList() {
   const [q, setQ] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [collectionFilter, setCollectionFilter] = useState<string>("all");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -139,12 +141,15 @@ function RecipesList() {
     const needle = q.trim().toLowerCase();
     let result = data;
     if (needle) result = result.filter(({ recipe }) => recipe.title.toLowerCase().includes(needle));
+    if (favoritesOnly) result = result.filter(({ recipe }) => recipe.favorited_at != null);
     if (collectionFilter !== "all") {
       const memberIds = collectionMembersQuery.data;
       result = memberIds ? result.filter(({ recipe }) => memberIds.has(recipe.id)) : [];
     }
     return result;
-  }, [data, q, collectionFilter, collectionMembersQuery.data]);
+  }, [data, q, favoritesOnly, collectionFilter, collectionMembersQuery.data]);
+
+  const isFiltering = q.trim() !== "" || favoritesOnly || collectionFilter !== "all";
 
   const archiveMut = useMutation({
     mutationFn: async (id: string) => archiveRecipe(id),
@@ -236,6 +241,18 @@ function RecipesList() {
           />
           Show archived
         </label>
+        <button
+          type="button"
+          aria-pressed={favoritesOnly}
+          onClick={() => setFavoritesOnly((v) => !v)}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm ${
+            favoritesOnly
+              ? "border-terracotta/40 bg-terracotta/10 text-terracotta"
+              : "border-border bg-background text-cocoa hover:bg-cream-deep/40"
+          }`}
+        >
+          <Heart className={`h-4 w-4 ${favoritesOnly ? "fill-current" : ""}`} /> Favorites
+        </button>
         <select
           value={collectionFilter}
           onChange={(e) => setCollectionFilter(e.target.value)}
@@ -260,9 +277,9 @@ function RecipesList() {
       {!isLoading && filtered.length === 0 && (
         <div className="rounded-3xl border border-dashed border-border bg-cream/40 p-8 text-center">
           <h3 className="font-display text-lg font-semibold text-cocoa">
-            {q ? "No recipes match that search." : "No recipes yet."}
+            {isFiltering ? "No recipes match these filters." : "No recipes yet."}
           </h3>
-          {!q && (
+          {!isFiltering && (
             <Link
               to="/app/recipes/new"
               className="mt-4 inline-flex rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-olive"
@@ -301,7 +318,12 @@ function RecipesList() {
                 alt={`${recipe.title} cover photo`}
                 className="mb-3 aspect-[4/3] w-full rounded-xl"
               />
-              <h3 className="font-display text-lg font-semibold text-cocoa">{recipe.title}</h3>
+              <h3 className="flex items-start gap-1.5 font-display text-lg font-semibold text-cocoa">
+                <span className="flex-1">{recipe.title}</span>
+                {recipe.favorited_at && (
+                  <Heart className="mt-1.5 h-4 w-4 shrink-0 fill-terracotta text-terracotta" aria-label="Favorite" />
+                )}
+              </h3>
               {recipe.description && (
                 <p className="mt-1 line-clamp-2 text-sm text-cocoa/70">{recipe.description}</p>
               )}

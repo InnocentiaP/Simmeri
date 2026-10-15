@@ -9,6 +9,7 @@ import {
   listCollectionIdsForRecipe,
   listCookingHistory,
   listCookingPhotosForHistoryIds,
+  setRecipeFavorite,
 } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -23,6 +24,8 @@ import { CoverPhotoUploader } from "@/components/app/CoverPhotoUploader";
 import { CollectionPicker } from "@/components/app/CollectionPicker";
 import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
 import { CookingHistoryList } from "@/components/app/CookingHistoryList";
+import { LastCookedSummary } from "@/components/app/LastCookedSummary";
+import { PostCookKitchenDialog } from "@/components/app/PostCookKitchenDialog";
 import { MealPlanEntryForm } from "@/components/app/MealPlanEntryForm";
 import { ShoppingGenerationReview } from "@/components/app/ShoppingGenerationReview";
 import { removeRecipeMedia } from "@/lib/media/storage";
@@ -40,6 +43,7 @@ import {
   ChefHat,
   CalendarPlus,
   ShoppingCart,
+  Heart,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -61,6 +65,7 @@ function RecipeDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showCollectionPicker, setShowCollectionPicker] = useState(false);
   const [showMarkCooked, setShowMarkCooked] = useState(false);
+  const [showPostCookKitchen, setShowPostCookKitchen] = useState(false);
   const [showAddToPlan, setShowAddToPlan] = useState(false);
   const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(null);
 
@@ -100,6 +105,16 @@ function RecipeDetail() {
       toast.success("Archived");
       qc.invalidateQueries();
     },
+  });
+  const favoriteMut = useMutation({
+    mutationFn: async (favorite: boolean) => setRecipeFavorite(recipeId, favorite),
+    onSuccess: (_, favorite) => {
+      toast.success(favorite ? "Added to favorites" : "Removed from favorites");
+      qc.invalidateQueries({ queryKey: ["recipe", recipeId] });
+      qc.invalidateQueries({ queryKey: ["recipes-list"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
   const unarchiveMut = useMutation({
     mutationFn: async () => unarchiveRecipe(recipeId),
@@ -177,6 +192,7 @@ function RecipeDetail() {
     );
 
   const { recipe, ingredients, steps, readiness } = data;
+  const isFavorite = recipe.favorited_at != null;
   const grouped: Record<string, typeof ingredients> = {
     core: [],
     supporting: [],
@@ -237,6 +253,20 @@ function RecipeDetail() {
           </button>
           <button
             type="button"
+            aria-pressed={isFavorite}
+            disabled={favoriteMut.isPending}
+            onClick={() => favoriteMut.mutate(!isFavorite)}
+            className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm disabled:opacity-60 ${
+              isFavorite
+                ? "border-terracotta/40 bg-terracotta/10 text-terracotta"
+                : "border-border bg-background text-cocoa hover:bg-cream-deep/40"
+            }`}
+          >
+            <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-current" : ""}`} />
+            {isFavorite ? "Favorite" : "Add to favorites"}
+          </button>
+          <button
+            type="button"
             onClick={() => setShowAddToPlan(true)}
             className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/40"
           >
@@ -272,6 +302,8 @@ function RecipeDetail() {
           </button>
         </div>
       </header>
+
+      <LastCookedSummary recipeId={recipeId} />
 
       {recipe.source_url && shouldShowSourceLink(recipe.source_url) && (
         <section className="mb-6 rounded-3xl border border-border/70 bg-cream/40 p-5">
@@ -407,7 +439,7 @@ function RecipeDetail() {
         </section>
       )}
 
-      <section className="rounded-3xl border border-border/70 bg-background p-5">
+      <section id="cooking-history" className="scroll-mt-6 rounded-3xl border border-border/70 bg-background p-5">
         <h2 className="mb-3 font-display text-xl font-semibold text-olive-deep">Cooking History</h2>
         <CookingHistoryList recipeId={recipeId} recipe={recipe} />
       </section>
@@ -419,9 +451,14 @@ function RecipeDetail() {
           onDone={() => {
             setShowMarkCooked(false);
             qc.invalidateQueries({ queryKey: ["cooking-history", recipeId] });
+            setShowPostCookKitchen(true);
           }}
           onClose={() => setShowMarkCooked(false)}
         />
+      )}
+
+      {showPostCookKitchen && (
+        <PostCookKitchenDialog recipeId={recipeId} onClose={() => setShowPostCookKitchen(false)} />
       )}
 
       {showAddToPlan && (
