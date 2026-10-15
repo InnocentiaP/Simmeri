@@ -9,7 +9,7 @@ import {
 // Model configuration is isolated here and never accepted from a request
 // body — matches the PRD's "price identifiers/plan mappings must not be
 // accepted from untrusted request bodies" principle applied to model choice.
-const GEMINI_MODEL = "gemini-3.5-flash";;
+const GEMINI_MODEL = "gemini-3.8-flash";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 // 20s: generation is slower than the 8s HTML-fetch timeout in ./url-fetch.server.ts.
 // Must be re-checked against the actual Vercel plan's serverless function
