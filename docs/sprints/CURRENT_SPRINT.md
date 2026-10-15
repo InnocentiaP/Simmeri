@@ -14,6 +14,8 @@ The active roadmap closes the gap between what the landing page promises and wha
 | 3 | Suggestions + Tonight's Deck: Wave 3 Checkpoints 3.4 + 3.5, dashboard suggestions, `/app/tonight` with swipe (via the installed `motion` library) layered on top of button + keyboard controls | **In review** — done before Phase 2 by owner request; recommendations use today's exact-name matching and improve automatically once Phase 2 lands |
 | 4 | Trust: data export, onboarding (kitchen staples), timezone actually applied | Not started |
 | 5 | Landing copy alignment (copy only, no redesign) for promises deferred below; also update `TonightsDeck.tsx` copy ("Three ideas", "short deck instead of an endless feed") to match the endless deck | Not started |
+| 6a | Import from anywhere — blogs: one-step URL import (JSON-LD → microdata → automatic AI fallback on the page's recipe section), cleaner text, recipe photo as cover, clearer errors for sites that block apps | **In review** (branch `feat/import-anywhere-6a`) |
+| 6b–6d | Screenshot/photo import, video upload + YouTube links (Gemini video), social-media captions | Not started |
 
 Deferred (not in this roadmap): screenshot import, offline/PWA, household sharing, drag-and-drop planner, Free/Premium entitlements and billing.
 
@@ -44,6 +46,14 @@ Notes:
 - `src/lib/recommendations/deck-state.ts` (tested): session-only Not tonight / Shortlist / Undo, kept in sessionStorage for the current day only; never written to the database.
 - `/app/tonight`: endless within the user's own collection (owner request, replacing the PRD's 5–8 card cap) — cookable-now recipes first, then ones needing a shop, then ones missing a core ingredient, each clearly labeled. Swipe left/right via `motion`, buttons for every action, keyboard ← / → / Z, reduced-motion support, shortlist comparison, and "Go through skipped ones again" once every recipe has been seen. "Cook this tonight" adds a dinner entry for today (no cooking-history record) and opens the recipe; "Plan a day" opens the meal-plan form and removes the recipe from the deck so swiping can continue for the next day. Already-planned recipes rank lower.
 - Dashboard "Tonight's picks" (top 3 with reasons); "Tonight" added to the app nav (second item, so Shopping moves to the drawer on mobile).
+
+## Phase 6a — blog import
+
+- `src/lib/import/recipe-page-extract.ts` (tested, incl. real-page checks): schema.org JSON-LD (with @graph, HowToSection, HTML/entity cleanup), microdata fallback, widest recipe photo / og:image, and focused AI input that starts at the recipe card or the most quantity-dense ingredient section instead of the top of the page.
+- `extractRecipeFromUrl` now falls back to AI automatically when structured data is missing or incomplete (shared `ai-extract.server.ts`, same per-user rate limit); the review screen labels how the draft was read.
+- Recipe photo offered as the cover; downloaded via the SSRF-safe fetcher (`fetchRemoteImage`, ≤ 5 MB, JPEG/PNG/WebP) and uploaded through the normal resize/EXIF-strip cover pipeline.
+- Fetcher: page cap raised from 2 MB to 5 MB, honest "compatible" User-Agent, friendly message when a site blocks apps (401/402/403/429/451).
+- Known limit: sites with bot protection (e.g. Allrecipes) can't be read; users paste text instead.
 
 ## Working rules
 

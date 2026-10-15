@@ -5,12 +5,50 @@ import net from "node:net";
 
 const MAX_REDIRECTS = 3;
 const TIMEOUT_MS = 8000;
-const MAX_BYTES = 2 * 1024 * 1024;
+
+// What a caller is willing to download. Every profile goes through the same
+// SSRF protections; only the accepted content types and size cap differ.
+interface FetchProfile {
+  accept: string;
+  acceptsContentType: (contentType: string) => boolean;
+  maxBytes: number;
+}
+
+// Many modern recipe blogs ship 2–4 MB of HTML (inline CSS/JS, ad markup),
+// so the page cap is generous; it is still streamed and enforced.
+const HTML_PROFILE: FetchProfile = {
+  accept: "text/html,application/xhtml+xml",
+  acceptsContentType: (ct) => {
+    const lower = ct.toLowerCase();
+    return lower.startsWith("text/html") || lower.startsWith("application/xhtml+xml");
+  },
+  maxBytes: 5 * 1024 * 1024,
+};
+
+export const REMOTE_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+const IMAGE_PROFILE: FetchProfile = {
+  accept: REMOTE_IMAGE_MIME_TYPES.join(","),
+  acceptsContentType: (ct) => {
+    const base = ct.toLowerCase().split(";")[0].trim();
+    return (REMOTE_IMAGE_MIME_TYPES as readonly string[]).includes(base);
+  },
+  maxBytes: 5 * 1024 * 1024,
+};
+
+// Identifies itself honestly, in the conventional "compatible" bot format
+// that many sites accept more readily than a bare product token.
+const USER_AGENT = "Mozilla/5.0 (compatible; Simmeri-RecipeImport/1.1)";
 
 // Every failure path collapses to this single message — never leak hostnames,
 // IPs, ports, or the specific internal reason to the client.
-const GENERIC_FETCH_ERROR =
-  "We couldn't reach that page. Double-check the URL and try again.";
+const GENERIC_FETCH_ERROR = "We couldn't reach that page. Double-check the URL and try again.";
+
+// Sites that refuse automated readers (paywalls, bot protection) answer with
+// these. Still reveals nothing about the target beyond "it said no".
+const BLOCKED_STATUSES = new Set([401, 402, 403, 429, 451]);
+const BLOCKED_FETCH_ERROR =
+  "That site doesn't let apps read its pages. Copy the recipe text and use “Paste text” instead.";
 
 function ipv4ToInt(ip: string): number | null {
   const parts = ip.split(".").map(Number);
@@ -167,7 +205,9 @@ function safeLookup(
     if (blocked) {
       devLog("Blocked disallowed resolved address for", hostname, blocked.address);
       return cb(
-        new Error("Blocked: target resolves to a disallowed network address") as NodeJS.ErrnoException,
+        new Error(
+          "Blocked: target resolves to a disallowed network address",
+        ) as NodeJS.ErrnoException,
       );
     }
 
@@ -187,7 +227,10 @@ function isAllowedProtocol(url: URL): boolean {
   return url.protocol === "http:" || url.protocol === "https:";
 }
 
-async function fetchOneHop(url: URL): Promise<{ status: number; contentType: string; body: string; location: string | null }> {
+async function fetchOneHop(
+  url: URL,
+  profile: FetchProfile,
+): Promise<{ status: number; contentType: string; body: Buffer; location: string | null }> {
   // Node's net/http stack skips the custom `lookup` entirely when the
   // hostname is already an IP literal (no DNS resolution needed) — so
   // safeLookup's checks never run for URLs like http://192.168.1.1/. This
@@ -219,8 +262,8 @@ async function fetchOneHop(url: URL): Promise<{ status: number; contentType: str
         autoSelectFamily: false,
         signal: controller.signal,
         headers: {
-          Accept: "text/html",
-          "User-Agent": "Simmeri-RecipeImport/1.0",
+          Accept: profile.accept,
+          "User-Agent": USER_AGENT,
         },
       },
       (res) => {
@@ -231,11 +274,11 @@ async function fetchOneHop(url: URL): Promise<{ status: number; contentType: str
         if (status >= 300 && status < 400 && location) {
           res.resume();
           clearTimeout(timer);
-          resolve({ status, contentType, body: "", location });
+          resolve({ status, contentType, body: Buffer.alloc(0), location });
           return;
         }
 
-        if (!contentType.toLowerCase().startsWith("text/html")) {
+        if (!profile.acceptsContentType(contentType)) {
           res.destroy();
           clearTimeout(timer);
           reject(new Error(GENERIC_FETCH_ERROR));
@@ -245,7 +288,9 @@ async function fetchOneHop(url: URL): Promise<{ status: number; contentType: str
         if (status < 200 || status >= 300) {
           res.destroy();
           clearTimeout(timer);
-          reject(new Error(GENERIC_FETCH_ERROR));
+          reject(
+            new Error(BLOCKED_STATUSES.has(status) ? BLOCKED_FETCH_ERROR : GENERIC_FETCH_ERROR),
+          );
           return;
         }
 
@@ -253,7 +298,7 @@ async function fetchOneHop(url: URL): Promise<{ status: number; contentType: str
         const chunks: Buffer[] = [];
         res.on("data", (chunk: Buffer) => {
           total += chunk.length;
-          if (total > MAX_BYTES) {
+          if (total > profile.maxBytes) {
             res.destroy();
             clearTimeout(timer);
             reject(new Error(GENERIC_FETCH_ERROR));
@@ -263,7 +308,7 @@ async function fetchOneHop(url: URL): Promise<{ status: number; contentType: str
         });
         res.on("end", () => {
           clearTimeout(timer);
-          resolve({ status, contentType, body: Buffer.concat(chunks).toString("utf-8"), location: null });
+          resolve({ status, contentType, body: Buffer.concat(chunks), location: null });
         });
         res.on("error", () => {
           clearTimeout(timer);
@@ -282,12 +327,16 @@ async function fetchOneHop(url: URL): Promise<{ status: number; contentType: str
   });
 }
 
-// Fetches a public recipe page HTML with SSRF protections: protocol
-// allow-list, DNS-pinned per-hop address validation (rejecting loopback,
-// private, link-local incl. cloud metadata, and reserved ranges), a bounded
-// manual redirect loop (each hop re-validated), timeout, and a streamed
-// response-size cap. Never forwards the caller's cookies/Authorization.
-export async function fetchRecipePageHtml(rawUrl: string): Promise<string> {
+// Fetches a public URL with SSRF protections: protocol allow-list,
+// DNS-pinned per-hop address validation (rejecting loopback, private,
+// link-local incl. cloud metadata, and reserved ranges), a bounded manual
+// redirect loop (each hop re-validated), timeout, content-type allow-list,
+// and a streamed response-size cap. Never forwards the caller's
+// cookies/Authorization.
+async function safeFetch(
+  rawUrl: string,
+  profile: FetchProfile,
+): Promise<{ body: Buffer; contentType: string }> {
   let current: URL;
   try {
     current = new URL(rawUrl);
@@ -300,7 +349,7 @@ export async function fetchRecipePageHtml(rawUrl: string): Promise<string> {
       throw new Error(GENERIC_FETCH_ERROR);
     }
 
-    const result = await fetchOneHop(current);
+    const result = await fetchOneHop(current, profile);
 
     if (result.location) {
       if (hop === MAX_REDIRECTS) {
@@ -316,8 +365,27 @@ export async function fetchRecipePageHtml(rawUrl: string): Promise<string> {
       continue;
     }
 
-    return result.body;
+    return { body: result.body, contentType: result.contentType };
   }
 
   throw new Error(GENERIC_FETCH_ERROR);
+}
+
+// Public recipe page HTML.
+export async function fetchRecipePageHtml(rawUrl: string): Promise<string> {
+  const { body } = await safeFetch(rawUrl, HTML_PROFILE);
+  return body.toString("utf-8");
+}
+
+// A recipe's source photo (JPEG/PNG/WebP, ≤ 5 MB), e.g. the schema.org
+// `image` or og:image found on an imported page.
+export async function fetchRemoteImage(
+  rawUrl: string,
+): Promise<{ bytes: Buffer; mimeType: (typeof REMOTE_IMAGE_MIME_TYPES)[number] }> {
+  const { body, contentType } = await safeFetch(rawUrl, IMAGE_PROFILE);
+  const mimeType = contentType
+    .toLowerCase()
+    .split(";")[0]
+    .trim() as (typeof REMOTE_IMAGE_MIME_TYPES)[number];
+  return { bytes: body, mimeType };
 }

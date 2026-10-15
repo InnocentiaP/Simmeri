@@ -2,16 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { importAuthMiddleware } from "./import-auth.server";
 import { fetchRecipePageHtml } from "./url-fetch.server";
-import { stripHtmlToReadableText } from "./html-to-text";
-import { callGeminiForRecipeExtraction } from "./gemini-client.server";
-import { parseAiRecipeDraft } from "./ai-draft-schema";
-import { normalizeAiDraftToFormValues, type NormalizedRecipeDraft } from "./ai-normalize";
-import { isAiRateLimited } from "./ai-rate-limit.server";
-import {
-  mapGeminiErrorToUserMessage,
-  AI_MALFORMED_RESPONSE_MESSAGE,
-  AI_RATE_LIMIT_EXCEEDED_MESSAGE,
-} from "./gemini-error-messages";
+import { buildAiInputFromHtml, extractRecipeFromHtml } from "./recipe-page-extract";
+import { runAiRecipeExtraction } from "./ai-extract.server";
+import type { NormalizedRecipeDraft } from "./ai-normalize";
 
 const MAX_PASTE_CHARS = 20_000;
 const MAX_EXTRACTED_CHARS = 12_000;
@@ -23,7 +16,10 @@ const requestSchema = z.discriminatedUnion("kind", [
       .string()
       .trim()
       .min(1, "Paste some recipe text first.")
-      .max(MAX_PASTE_CHARS, "That text is too long for AI extraction — try trimming it or use manual entry."),
+      .max(
+        MAX_PASTE_CHARS,
+        "That text is too long for AI extraction — try trimming it or use manual entry.",
+      ),
   }),
   z.object({ kind: z.literal("url"), url: z.string().trim().url() }),
 ]);
@@ -47,9 +43,6 @@ export const improveRecipeDraftWithAI = createServerFn({ method: "POST" })
   .validator(requestSchema)
   .handler(async ({ data, context }): Promise<ImproveRecipeDraftWithAiResult> => {
     const userId = (context as { userId: string }).userId;
-    if (isAiRateLimited(userId)) {
-      throw new Error(AI_RATE_LIMIT_EXCEEDED_MESSAGE);
-    }
 
     let cleanedText: string;
     let truncatedInput = false;
@@ -57,31 +50,28 @@ export const improveRecipeDraftWithAI = createServerFn({ method: "POST" })
     if (data.kind === "text") {
       cleanedText = data.text;
     } else {
+      // Focus on the page's recipe section (and any partial schema.org data)
+      // rather than the top of the page, where blogs put long stories.
       const html = await fetchRecipePageHtml(data.url);
-      const stripped = stripHtmlToReadableText(html, MAX_EXTRACTED_CHARS);
-      cleanedText = stripped.text;
-      truncatedInput = stripped.truncated;
+      const page = extractRecipeFromHtml(html, data.url);
+      const input = buildAiInputFromHtml(html, MAX_EXTRACTED_CHARS, page.recipeNode);
+      cleanedText = input.text;
+      truncatedInput = input.truncated;
     }
 
-    const geminiResult = await callGeminiForRecipeExtraction(cleanedText);
-    if (!geminiResult.ok) {
-      throw new Error(mapGeminiErrorToUserMessage(geminiResult.category));
+    const ai = await runAiRecipeExtraction(userId, cleanedText);
+    if (!ai.ok) {
+      throw new Error(ai.message);
     }
 
-    const parsed = parseAiRecipeDraft(geminiResult.rawText);
-    if (!parsed.ok) {
-      throw new Error(AI_MALFORMED_RESPONSE_MESSAGE);
-    }
-
-    const draft = normalizeAiDraftToFormValues(parsed.draft);
     const warnings: string[] = [];
     if (truncatedInput) {
       warnings.push("That page was long — some content may have been cut before AI extraction.");
     }
 
     return {
-      draft,
+      draft: ai.draft,
       warnings,
-      aiMeta: { model: geminiResult.model, truncatedInput },
+      aiMeta: { model: ai.model, truncatedInput },
     };
   });

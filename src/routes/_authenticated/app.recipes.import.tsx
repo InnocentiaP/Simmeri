@@ -2,9 +2,15 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, Link as LinkIcon, FileText, Sparkles } from "lucide-react";
+import { ChevronLeft, Link as LinkIcon, FileText, Sparkles, Database } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { attachImportedCover } from "@/lib/media/import-cover";
 import { saveImportedRecipe, type RecipeFormValues } from "@/lib/api";
-import { RecipeFormFields, useRecipeForm, type RecipeFormSchema } from "@/components/app/RecipeForm";
+import {
+  RecipeFormFields,
+  useRecipeForm,
+  type RecipeFormSchema,
+} from "@/components/app/RecipeForm";
 import { extractDraftFromPlainText } from "@/lib/import/plaintext-extract";
 import { extractRecipeFromUrl } from "@/lib/import/recipe-import.functions";
 import { improveRecipeDraftWithAI } from "@/lib/import/recipe-ai-import.functions";
@@ -43,7 +49,10 @@ function ImportRecipe() {
   function handleExtract() {
     if (mode === "paste") {
       const { draft, warnings } = extractDraftFromPlainText(pasteText);
-      setStep({ kind: "review", result: { draft, warnings, source: { url: null, title: null } } });
+      setStep({
+        kind: "review",
+        result: { draft, warnings, source: { url: null, title: null }, method: "text" },
+      });
     } else {
       setStep({ kind: "extracting" });
       urlMutation.mutate(url);
@@ -127,7 +136,8 @@ function ImportRecipe() {
             className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
           />
           <p className="mt-1.5 text-xs text-cocoa/60">
-            Video and social-media links may not be supported yet. Paste the recipe text instead.
+            Works with most recipe blogs and websites. Social-media and video links aren't supported
+            yet — paste the caption or recipe text instead.
           </p>
         </div>
       )}
@@ -141,7 +151,9 @@ function ImportRecipe() {
           disabled={extractDisabled}
           className="rounded-full bg-olive-deep px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-olive disabled:opacity-60"
         >
-          {step.kind === "extracting" ? "Fetching and reading that page…" : "Extract recipe"}
+          {step.kind === "extracting"
+            ? "Reading that page… (a few seconds if Meri needs AI)"
+            : "Extract recipe"}
         </button>
       </div>
     </div>
@@ -160,16 +172,37 @@ function ReviewStep({
   const form = useRecipeForm(result.draft);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user } = useAuth();
 
-  const [aiApplied, setAiApplied] = useState(false);
+  // The automatic URL import may already have used AI.
+  const [aiApplied, setAiApplied] = useState(result.method === "ai");
+  const [useSourcePhoto, setUseSourcePhoto] = useState(Boolean(result.imageUrl));
+  const [photoFailedToLoad, setPhotoFailedToLoad] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [preAiSnapshot, setPreAiSnapshot] = useState<RecipeFormSchema | null>(null);
   const [aiConfigMissing, setAiConfigMissing] = useState(false);
 
   const saveMut = useMutation({
-    mutationFn: async (values: RecipeFormValues) => saveImportedRecipe(values, result.source),
-    onSuccess: (id) => {
+    mutationFn: async (values: RecipeFormValues) => {
+      const id = await saveImportedRecipe(values, result.source);
+      let coverFailed = false;
+      // The recipe is already saved; a photo failure never undoes that.
+      if (id && user && useSourcePhoto && result.imageUrl && !photoFailedToLoad) {
+        try {
+          await attachImportedCover(user.id, id, result.imageUrl);
+        } catch {
+          coverFailed = true;
+        }
+      }
+      return { id, coverFailed };
+    },
+    onSuccess: ({ id, coverFailed }) => {
       toast.success("Recipe saved");
+      if (coverFailed) {
+        toast.warning(
+          "We couldn't add the photo from that page. You can upload one on the recipe page.",
+        );
+      }
       qc.invalidateQueries();
       navigate({ to: "/app/recipes/$recipeId", params: { recipeId: id! } });
     },
@@ -183,8 +216,8 @@ function ReviewStep({
   const aiMut = useMutation({
     mutationFn: async () => {
       const source = result.source.url
-        ? ({ kind: "url" as const, url: result.source.url })
-        : ({ kind: "text" as const, text: pasteText ?? "" });
+        ? { kind: "url" as const, url: result.source.url }
+        : { kind: "text" as const, text: pasteText ?? "" };
       return improveRecipeDraftWithAI({ data: source });
     },
     onMutate: () => {
@@ -228,6 +261,7 @@ function ReviewStep({
           </a>
         </p>
       )}
+      {result.method && result.method !== "text" && <MethodBadge method={result.method} />}
       {result.warnings.length > 0 && (
         <div className="mb-6 rounded-2xl border border-caramel/40 bg-caramel/10 p-4 text-sm text-cocoa">
           <ul className="list-disc pl-4">
@@ -289,6 +323,34 @@ function ReviewStep({
         </p>
       </div>
 
+      {result.imageUrl && !photoFailedToLoad && (
+        <div className="mb-6 flex flex-wrap items-center gap-4 rounded-2xl border border-border/70 bg-background p-4">
+          {/* Shown straight from the source site for preview only; the saved
+              cover is a resized copy in your private storage. */}
+          <img
+            src={result.imageUrl}
+            alt="Photo from the recipe page"
+            referrerPolicy="no-referrer"
+            onError={() => setPhotoFailedToLoad(true)}
+            className="h-24 w-32 rounded-xl object-cover"
+          />
+          <label className="flex flex-1 items-start gap-2 text-sm text-cocoa">
+            <input
+              type="checkbox"
+              checked={useSourcePhoto}
+              onChange={(e) => setUseSourcePhoto(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              Use this photo as the recipe cover
+              <span className="block text-xs text-cocoa/60">
+                A copy is saved privately to your library. You can change it later.
+              </span>
+            </span>
+          </label>
+        </div>
+      )}
+
       <form
         onSubmit={form.handleSubmit((v) => saveMut.mutate(v as RecipeFormValues))}
         className="flex flex-col gap-6"
@@ -312,5 +374,20 @@ function ReviewStep({
         </div>
       </form>
     </div>
+  );
+}
+
+function MethodBadge({ method }: { method: NonNullable<ImportResult["method"]> }) {
+  const content =
+    method === "ai"
+      ? { icon: Sparkles, label: "Read by Meri with AI — double-check before saving" }
+      : method === "partial"
+        ? { icon: Database, label: "Only part of the recipe could be read" }
+        : { icon: Database, label: "Read from the page's recipe data" };
+  const Icon = content.icon;
+  return (
+    <p className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-olive-deep/10 px-3 py-1 text-xs font-medium text-olive-deep">
+      <Icon className="h-3.5 w-3.5" /> {content.label}
+    </p>
   );
 }

@@ -9,10 +9,21 @@ export interface ImportSource {
   title: string | null;
 }
 
+// How a draft was produced, shown to the user during review:
+// - json_ld / microdata: read from the page's schema.org recipe data
+// - ai: extracted by AI from the page text (structured data was missing
+//   or incomplete)
+// - partial: whatever could be read without AI; fields may be missing
+// - text: parsed from pasted text
+export type ImportMethod = "json_ld" | "microdata" | "ai" | "partial" | "text";
+
 export interface ImportResult {
   draft: ExtractedRecipeDraft;
   warnings: string[];
   source: ImportSource;
+  method?: ImportMethod;
+  // The recipe's own photo on the source page, offered as a cover.
+  imageUrl?: string | null;
 }
 
 export function emptyDraft(title = ""): ExtractedRecipeDraft {
