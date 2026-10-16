@@ -9,6 +9,7 @@ import {
   Sparkles,
   Database,
   Image as ImageIcon,
+  Film,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { attachImportedCover } from "@/lib/media/import-cover";
@@ -25,6 +26,13 @@ import { extractRecipeFromImages } from "@/lib/import/recipe-image-import.functi
 import { fileToAiImagePayload } from "@/lib/import/image-to-payload";
 import { MAX_AI_IMAGES, type AiImagePayload } from "@/lib/import/image-payload";
 import { ImageImportPicker, type PickedImage } from "@/components/app/ImageImportPicker";
+import { SaveVideoHelp } from "@/components/app/SaveVideoHelp";
+import {
+  importRecipeFromVideoFile,
+  importRecipeFromYouTube,
+  type VideoImportPhase,
+} from "@/lib/import/video-upload";
+import { detectSocialPlatform, parseYouTubeUrl } from "@/lib/import/video-source";
 import type { ImportResult } from "@/lib/import/types";
 
 const MAX_PASTE_CHARS = 20_000;
@@ -34,7 +42,7 @@ export const Route = createFileRoute("/_authenticated/app/recipes/import")({
   component: ImportRecipe,
 });
 
-type SourceMode = "paste" | "url" | "images";
+type SourceMode = "paste" | "url" | "images" | "video";
 
 type PreparedImage = PickedImage & { payload: AiImagePayload };
 type Step =
@@ -50,6 +58,9 @@ function ImportRecipe() {
   const [step, setStep] = useState<Step>({ kind: "input" });
   const [images, setImages] = useState<PreparedImage[]>([]);
   const [preparingImages, setPreparingImages] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPhase, setVideoPhase] = useState<VideoImportPhase | null>(null);
   const imagesRef = useRef(images);
   imagesRef.current = images;
 
@@ -106,6 +117,28 @@ function ImportRecipe() {
       }),
   });
 
+  const videoMutation = useMutation({
+    mutationFn: async (source: { file: File; creditUrl: string | null } | { url: string }) => {
+      if (!("file" in source)) return importRecipeFromYouTube(source.url);
+      const result = await importRecipeFromVideoFile(source.file, setVideoPhase);
+      // Credit the original post (e.g. the TikTok link) as the recipe source.
+      return source.creditUrl
+        ? { ...result, source: { url: source.creditUrl, title: null } }
+        : result;
+    },
+    onSuccess: (result) => {
+      setVideoPhase(null);
+      setStep({ kind: "review", result });
+    },
+    onError: (e: Error) => {
+      setVideoPhase(null);
+      setStep({
+        kind: "error",
+        message: e.message || "Meri couldn't watch that video. Try again or use a screenshot.",
+      });
+    },
+  });
+
   const urlMutation = useMutation({
     mutationFn: (u: string) => extractRecipeFromUrl({ data: { url: u } }),
     onSuccess: (result) => setStep({ kind: "review", result }),
@@ -115,6 +148,11 @@ function ImportRecipe() {
         message: e.message || "We couldn't reach that page. Double-check the URL and try again.",
       }),
   });
+
+  function switchMode(next: SourceMode) {
+    setMode(next);
+    if (step.kind === "error") setStep({ kind: "input" });
+  }
 
   function handleExtract() {
     if (mode === "paste") {
@@ -126,7 +164,26 @@ function ImportRecipe() {
     } else if (mode === "images") {
       setStep({ kind: "extracting" });
       imagesMutation.mutate(images.map((img) => img.payload));
+    } else if (mode === "video") {
+      setStep({ kind: "extracting" });
+      videoMutation.mutate(
+        videoFile
+          ? { file: videoFile, creditUrl: detectSocialPlatform(videoUrl) ? videoUrl.trim() : null }
+          : { url: videoUrl },
+      );
+    } else if (parseYouTubeUrl(url)) {
+      // A YouTube link pasted in the URL tab goes straight to video import.
+      setStep({ kind: "extracting" });
+      videoMutation.mutate({ url });
     } else {
+      const platform = detectSocialPlatform(url);
+      if (platform) {
+        setStep({
+          kind: "error",
+          message: `${platform} doesn't let apps read its posts. Save the video and use the “Video” tab, or screenshot the caption and use “Photo / screenshot”.`,
+        });
+        return;
+      }
       setStep({ kind: "extracting" });
       urlMutation.mutate(url);
     }
@@ -143,13 +200,17 @@ function ImportRecipe() {
     );
   }
 
+  const videoSocialPlatform = detectSocialPlatform(videoUrl);
+
   const extractDisabled =
     step.kind === "extracting" ||
     (mode === "paste"
       ? !pasteText.trim()
       : mode === "images"
         ? images.length === 0 || preparingImages
-        : !url.trim());
+        : mode === "video"
+          ? !videoFile && !parseYouTubeUrl(videoUrl)
+          : !url.trim());
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -165,13 +226,15 @@ function ImportRecipe() {
           ? "Import from a public recipe webpage — paste the link below. You'll review and edit everything before it's saved."
           : mode === "images"
             ? "Add screenshots of a recipe — an Instagram or TikTok caption, a cookbook page, or a handwritten card. Meri reads the text and you review everything before it's saved."
-            : "Paste the recipe's text below. You'll review and edit everything before it's saved."}
+            : mode === "video"
+              ? "Paste a YouTube link or upload a recipe video you've saved. Meri watches it and drafts the recipe — you review everything before it's saved."
+              : "Paste the recipe's text below. You'll review and edit everything before it's saved."}
       </p>
 
       <div className="mb-4 inline-flex rounded-full border border-border bg-background p-1">
         <button
           type="button"
-          onClick={() => setMode("paste")}
+          onClick={() => switchMode("paste")}
           className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
             mode === "paste" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
           }`}
@@ -180,7 +243,7 @@ function ImportRecipe() {
         </button>
         <button
           type="button"
-          onClick={() => setMode("url")}
+          onClick={() => switchMode("url")}
           className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
             mode === "url" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
           }`}
@@ -189,16 +252,97 @@ function ImportRecipe() {
         </button>
         <button
           type="button"
-          onClick={() => setMode("images")}
+          onClick={() => switchMode("images")}
           className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
             mode === "images" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
           }`}
         >
           <ImageIcon className="h-3.5 w-3.5" /> Photo / screenshot
         </button>
+        <button
+          type="button"
+          onClick={() => switchMode("video")}
+          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
+            mode === "video" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
+          }`}
+        >
+          <Film className="h-3.5 w-3.5" /> Video
+        </button>
       </div>
 
-      {mode === "images" ? (
+      {mode === "video" ? (
+        <div className="flex flex-col gap-3">
+          <input
+            value={videoUrl}
+            onChange={(e) => {
+              setVideoUrl(e.target.value);
+              // A YouTube link replaces an upload; a social link is kept
+              // alongside the uploaded file as its source credit.
+              if (parseYouTubeUrl(e.target.value)) setVideoFile(null);
+            }}
+            type="url"
+            placeholder="YouTube link — or the TikTok/Instagram post link, for credit"
+            aria-label="Video link"
+            disabled={step.kind === "extracting"}
+            className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
+          />
+          {videoSocialPlatform && (
+            <p className="rounded-2xl border border-caramel/40 bg-caramel/10 p-3 text-sm text-cocoa">
+              {videoSocialPlatform} videos can't be watched straight from the link. Save the video,
+              then choose it below — this link will be kept as the recipe's source.
+            </p>
+          )}
+          <SaveVideoHelp platform={videoSocialPlatform} />
+          <p className="text-center text-xs uppercase tracking-wide text-cocoa/50">
+            {videoSocialPlatform ? "then" : "or"}
+          </p>
+          <label className="flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-border bg-cream/40 p-5 text-center text-sm text-cocoa hover:bg-cream-deep/40">
+            <Film className="mb-1.5 h-6 w-6 text-olive-deep" aria-hidden="true" />
+            {videoFile ? (
+              <span>
+                <span className="font-medium">{videoFile.name}</span> ·{" "}
+                {(videoFile.size / (1024 * 1024)).toFixed(1)} MB — choose another
+              </span>
+            ) : (
+              <span>Choose a video file</span>
+            )}
+            <span className="mt-1 text-xs text-cocoa/60">
+              MP4, MOV, or WebM · up to 200 MB and 15 minutes
+            </span>
+            <input
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm,video/3gpp,video/mpeg,.mov,.m4v"
+              className="sr-only"
+              disabled={step.kind === "extracting"}
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setVideoFile(file);
+                if (file && parseYouTubeUrl(videoUrl)) setVideoUrl("");
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {videoPhase?.kind === "uploading" && (
+            <div
+              role="progressbar"
+              aria-label="Uploading video"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(videoPhase.fraction * 100)}
+              className="h-2 overflow-hidden rounded-full bg-cream-deep"
+            >
+              <div
+                className="h-full bg-olive-deep transition-[width]"
+                style={{ width: `${Math.round(videoPhase.fraction * 100)}%` }}
+              />
+            </div>
+          )}
+          <p className="text-xs text-cocoa/60">
+            Your video is only used to read the recipe and is deleted right after. Private or
+            unlisted YouTube videos can't be read.
+          </p>
+        </div>
+      ) : mode === "images" ? (
         <ImageImportPicker
           images={images}
           busy={preparingImages}
@@ -233,8 +377,8 @@ function ImportRecipe() {
             className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
           />
           <p className="mt-1.5 text-xs text-cocoa/60">
-            Works with most recipe blogs and websites. For Instagram, TikTok, or Facebook posts,
-            screenshot the caption and use “Photo / screenshot”.
+            Works with most recipe blogs and websites, and YouTube links. For Instagram, TikTok, or
+            Facebook posts, use “Video” or “Photo / screenshot”.
           </p>
         </div>
       )}
@@ -249,9 +393,13 @@ function ImportRecipe() {
           className="rounded-full bg-olive-deep px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-olive disabled:opacity-60"
         >
           {step.kind === "extracting"
-            ? mode === "images"
-              ? "Meri is reading your images…"
-              : "Reading that page… (a few seconds if Meri needs AI)"
+            ? videoPhase?.kind === "uploading"
+              ? `Uploading video… ${Math.round(videoPhase.fraction * 100)}%`
+              : videoPhase?.kind === "watching" || mode === "video" || parseYouTubeUrl(url)
+                ? "Meri is watching the video… (up to a minute)"
+                : mode === "images"
+                  ? "Meri is reading your images…"
+                  : "Reading that page… (a few seconds if Meri needs AI)"
             : "Extract recipe"}
         </button>
       </div>
@@ -276,7 +424,14 @@ function ReviewStep({
   const { user } = useAuth();
 
   // The automatic URL import and image import have already used AI.
-  const [aiApplied, setAiApplied] = useState(result.method === "ai" || result.method === "images");
+  const [aiApplied, setAiApplied] = useState(
+    result.method === "ai" || result.method === "images" || result.method === "video",
+  );
+  // An uploaded video is deleted right after reading, so it can't be re-read;
+  // a YouTube video (kept as the source URL) can.
+  const youTubeSource =
+    result.method === "video" && result.source.url ? parseYouTubeUrl(result.source.url) : null;
+  const canAskAi = result.method !== "video" || youTubeSource !== null;
   const [useSourcePhoto, setUseSourcePhoto] = useState(Boolean(result.imageUrl));
   const [photoFailedToLoad, setPhotoFailedToLoad] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
@@ -316,6 +471,10 @@ function ReviewStep({
   // content" ever crosses the wire — see the AI integration plan, section B.
   const aiMut = useMutation({
     mutationFn: async () => {
+      if (youTubeSource) {
+        const r = await importRecipeFromYouTube(youTubeSource);
+        return { draft: r.draft, warnings: r.warnings };
+      }
       // Image imports retry by re-reading the same images.
       if (images && images.length > 0) {
         const r = await extractRecipeFromImages({ data: { images } });
@@ -393,7 +552,7 @@ function ReviewStep({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {aiApplied && (
+            {aiApplied && preAiSnapshot && (
               <button
                 type="button"
                 onClick={handleResetToDeterministic}
@@ -402,15 +561,17 @@ function ReviewStep({
                 Reset to original draft
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => aiMut.mutate()}
-              disabled={aiMut.isPending || aiConfigMissing}
-              className="inline-flex items-center gap-1.5 rounded-full border border-olive-deep px-4 py-1.5 text-sm font-medium text-olive-deep hover:bg-olive-deep/10 disabled:opacity-60"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {aiMut.isPending ? "Asking AI…" : aiApplied ? "Try AI again" : "Improve with AI"}
-            </button>
+            {canAskAi && (
+              <button
+                type="button"
+                onClick={() => aiMut.mutate()}
+                disabled={aiMut.isPending || aiConfigMissing}
+                className="inline-flex items-center gap-1.5 rounded-full border border-olive-deep px-4 py-1.5 text-sm font-medium text-olive-deep hover:bg-olive-deep/10 disabled:opacity-60"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {aiMut.isPending ? "Asking AI…" : aiApplied ? "Try AI again" : "Improve with AI"}
+              </button>
+            )}
           </div>
         </div>
         {aiWarnings.length > 0 && (
@@ -485,13 +646,15 @@ function ReviewStep({
 
 function MethodBadge({ method }: { method: NonNullable<ImportResult["method"]> }) {
   const content =
-    method === "images"
-      ? { icon: Sparkles, label: "Read by Meri from your images — double-check before saving" }
-      : method === "ai"
-        ? { icon: Sparkles, label: "Read by Meri with AI — double-check before saving" }
-        : method === "partial"
-          ? { icon: Database, label: "Only part of the recipe could be read" }
-          : { icon: Database, label: "Read from the page's recipe data" };
+    method === "video"
+      ? { icon: Film, label: "Watched by Meri — fill in any amounts the video didn't say" }
+      : method === "images"
+        ? { icon: Sparkles, label: "Read by Meri from your images — double-check before saving" }
+        : method === "ai"
+          ? { icon: Sparkles, label: "Read by Meri with AI — double-check before saving" }
+          : method === "partial"
+            ? { icon: Database, label: "Only part of the recipe could be read" }
+            : { icon: Database, label: "Read from the page's recipe data" };
   const Icon = content.icon;
   return (
     <p className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-olive-deep/10 px-3 py-1 text-xs font-medium text-olive-deep">

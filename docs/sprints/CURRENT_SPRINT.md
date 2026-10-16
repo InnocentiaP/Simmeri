@@ -16,7 +16,8 @@ The active roadmap closes the gap between what the landing page promises and wha
 | 5 | Landing copy alignment (copy only, no redesign) for promises deferred below; also update `TonightsDeck.tsx` copy ("Three ideas", "short deck instead of an endless feed") to match the endless deck | Not started |
 | 6a | Import from anywhere — blogs: one-step URL import (JSON-LD → microdata → automatic AI fallback on the page's recipe section), cleaner text, recipe photo as cover, clearer errors for sites that block apps | **In review** (branch `feat/import-anywhere-6a`) |
 | 6b | Screenshot/photo import (Gemini vision): up to 5 images via picker, drag-and-drop, or clipboard paste | **In review** (branch `feat/import-anywhere-6b`) |
-| 6c–6d | Video upload + YouTube links (Gemini video), social-media captions | Not started |
+| 6c | Video import: YouTube links and uploaded clips (Gemini video); social links get guidance | **In review** (branch `feat/import-anywhere-6c`) |
+| 6d | Social-media captions via official oEmbed where available; mobile share target (PWA) | Not started |
 
 Deferred (not in this roadmap): screenshot import, offline/PWA, household sharing, drag-and-drop planner, Free/Premium entitlements and billing.
 
@@ -63,6 +64,22 @@ Notes:
 - `extractRecipeFromImages` sends the images to Gemini with the existing extraction rules plus an image-specific prompt (read only visible text, ignore app UI, never guess unreadable values); same per-user AI rate limit. Images are never stored.
 - Review screen labels the draft "Read by Meri from your images"; "Try AI again" re-reads the same images.
 - Verified against the live API: an image costs roughly 1,100 input tokens.
+
+## Phase 6c — video import
+
+- New "Video" import tab: paste a public YouTube link or upload a clip (MP4/MOV/WebM/3GP/MPEG, ≤ 200 MB, ≤ 15 min). YouTube links pasted in the URL tab are routed here automatically; Instagram/TikTok/Facebook/X links get guidance instead of a failed fetch.
+- Uploads go straight from the browser to the Gemini Files API through a resumable session the server opens (bound to the app origin, so CORS works and the API key never reaches the browser; bytes never pass through our functions). Each file is tagged with its owner, only its owner can have it read, and it is deleted right after reading (Gemini also auto-deletes after 48 h).
+- Rate limit is counted when an upload starts, not again on read. YouTube imports keep the watch URL as the recipe source and offer the video thumbnail as cover.
+- Prompt: build steps from speech, on-screen text, and visible actions; never estimate unspoken amounts. Tested on a real 5-minute recipe video: complete ingredients and ordered steps, unstated amounts left blank, ~28 s and ~31k tokens at low media resolution.
+- Video tab: a pasted TikTok/Instagram/Facebook/X link shows inline guidance and a "How do I save this video?" panel (app's own Save option or the phone's screen recorder only — no third-party downloaders); the link is kept as the recipe source when the saved clip is uploaded.
+- `vercel.functions.maxDuration: 60` (vite.config.ts); Gemini video timeout 50 s; a call that waits for upload processing (≤ 20 s) never also runs the AI read.
+- Pure rules in `src/lib/import/video-source.ts` (tested): YouTube URL parsing, social-platform detection, upload limits, ownership tag.
+- Gemini API key now sent in the `x-goog-api-key` header instead of the URL.
+
+## Deck daily shuffle (follow-up to Phase 3)
+
+- `recommend()` takes an optional `seed`: a repeatable per-recipe nudge of up to 35 points, applied within readiness tiers only (cookable now → needs a shop → missing a core ingredient). The spread is kept below the "cooked in the last 3 days" penalty so recently cooked recipes still sink.
+- Tonight's Deck seeds by date (order changes every day) plus a Shuffle button for a new order on demand; dashboard picks use the same daily seed.
 
 ## Working rules
 

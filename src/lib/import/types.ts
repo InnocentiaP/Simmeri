@@ -16,7 +16,8 @@ export interface ImportSource {
 // - partial: whatever could be read without AI; fields may be missing
 // - text: parsed from pasted text
 // - images: read by AI from screenshots/photos
-export type ImportMethod = "json_ld" | "microdata" | "ai" | "partial" | "text" | "images";
+// - video: watched by AI (uploaded clip or YouTube link)
+export type ImportMethod = "json_ld" | "microdata" | "ai" | "partial" | "text" | "images" | "video";
 
 export interface ImportResult {
   draft: ExtractedRecipeDraft;

@@ -1,6 +1,7 @@
 import {
   callGeminiForImageRecipeExtraction,
   callGeminiForRecipeExtraction,
+  callGeminiForVideoRecipeExtraction,
   type GeminiCallResult,
 } from "./gemini-client.server";
 import type { AiImagePayload } from "./image-payload";
@@ -37,11 +38,23 @@ export async function runAiImageRecipeExtraction(
   return runWithLimits(userId, () => callGeminiForImageRecipeExtraction(images));
 }
 
+// Same pipeline for a video (uploaded file uri or YouTube URL). Uploads are
+// counted against the rate limit when the upload starts, so the extraction
+// that follows passes alreadyCounted to avoid charging the user twice.
+export async function runAiVideoRecipeExtraction(
+  userId: string,
+  video: { fileUri: string; mimeType?: string },
+  { alreadyCounted = false }: { alreadyCounted?: boolean } = {},
+): Promise<AiExtractionOutcome> {
+  return runWithLimits(userId, () => callGeminiForVideoRecipeExtraction(video), alreadyCounted);
+}
+
 async function runWithLimits(
   userId: string,
   call: () => Promise<GeminiCallResult>,
+  alreadyCounted = false,
 ): Promise<AiExtractionOutcome> {
-  if (isAiRateLimited(userId)) {
+  if (!alreadyCounted && isAiRateLimited(userId)) {
     return { ok: false, message: AI_RATE_LIMIT_EXCEEDED_MESSAGE, notConfigured: false };
   }
 
