@@ -25,6 +25,13 @@ const HTML_PROFILE: FetchProfile = {
   maxBytes: 5 * 1024 * 1024,
 };
 
+// Small JSON documents such as oEmbed responses.
+const JSON_PROFILE: FetchProfile = {
+  accept: "application/json",
+  acceptsContentType: (ct) => ct.toLowerCase().includes("json"),
+  maxBytes: 512 * 1024,
+};
+
 export const REMOTE_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 const IMAGE_PROFILE: FetchProfile = {
@@ -375,6 +382,16 @@ async function safeFetch(
 export async function fetchRecipePageHtml(rawUrl: string): Promise<string> {
   const { body } = await safeFetch(rawUrl, HTML_PROFILE);
   return body.toString("utf-8");
+}
+
+// A public JSON document (e.g. an oEmbed response), parsed.
+export async function fetchPublicJson(rawUrl: string): Promise<unknown> {
+  const { body } = await safeFetch(rawUrl, JSON_PROFILE);
+  try {
+    return JSON.parse(body.toString("utf-8"));
+  } catch {
+    throw new Error(GENERIC_FETCH_ERROR);
+  }
 }
 
 // A recipe's source photo (JPEG/PNG/WebP, ≤ 5 MB), e.g. the schema.org

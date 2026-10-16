@@ -17,7 +17,9 @@ export interface ImportSource {
 // - text: parsed from pasted text
 // - images: read by AI from screenshots/photos
 // - video: watched by AI (uploaded clip or YouTube link)
-export type ImportMethod = "json_ld" | "microdata" | "ai" | "partial" | "text" | "images" | "video";
+// - social: read by AI from an X/TikTok post caption (official oEmbed)
+export type ImportMethod =
+  "json_ld" | "microdata" | "ai" | "partial" | "text" | "images" | "video" | "social";
 
 export interface ImportResult {
   draft: ExtractedRecipeDraft;

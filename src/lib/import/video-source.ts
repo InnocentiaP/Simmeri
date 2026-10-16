@@ -41,7 +41,7 @@ export function parseYouTubeUrl(input: string): string | null {
   return id && YOUTUBE_ID_RE.test(id) ? `https://www.youtube.com/watch?v=${id}` : null;
 }
 
-export type SocialPlatform = "Instagram" | "TikTok" | "Facebook" | "X";
+export type SocialPlatform = "Instagram" | "TikTok" | "Facebook" | "X" | "Threads";
 
 // Platforms whose pages can't be read by apps; the UI points users to the
 // screenshot or video-upload options instead.
@@ -57,6 +57,7 @@ export function detectSocialPlatform(input: string): SocialPlatform | null {
   if (host === "facebook.com" || host === "fb.watch" || host.endsWith(".facebook.com"))
     return "Facebook";
   if (host === "x.com" || host === "twitter.com") return "X";
+  if (host === "threads.net" || host === "threads.com") return "Threads";
   return null;
 }
 

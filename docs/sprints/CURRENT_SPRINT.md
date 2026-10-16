@@ -17,7 +17,7 @@ The active roadmap closes the gap between what the landing page promises and wha
 | 6a | Import from anywhere — blogs: one-step URL import (JSON-LD → microdata → automatic AI fallback on the page's recipe section), cleaner text, recipe photo as cover, clearer errors for sites that block apps | **In review** (branch `feat/import-anywhere-6a`) |
 | 6b | Screenshot/photo import (Gemini vision): up to 5 images via picker, drag-and-drop, or clipboard paste | **In review** (branch `feat/import-anywhere-6b`) |
 | 6c | Video import: YouTube links and uploaded clips (Gemini video); social links get guidance | **In review** (branch `feat/import-anywhere-6c`) |
-| 6d | Social-media captions via official oEmbed where available; mobile share target (PWA) | Not started |
+| 6d | X/TikTok captions via official oEmbed; installable app + Android Share target | **In review** (branch `feat/import-anywhere-6d`) |
 
 Deferred (not in this roadmap): screenshot import, offline/PWA, household sharing, drag-and-drop planner, Free/Premium entitlements and billing.
 
@@ -80,6 +80,15 @@ Notes:
 
 - `recommend()` takes an optional `seed`: a repeatable per-recipe nudge of up to 35 points, applied within readiness tiers only (cookable now → needs a shop → missing a core ingredient). The spread is kept below the "cooked in the last 3 days" penalty so recently cooked recipes still sink.
 - Tonight's Deck seeds by date (order changes every day) plus a Shuffle button for a new order on demand; dashboard picks use the same daily seed.
+
+## Phase 6d — social captions and Share to Simmeri
+
+- X and TikTok post links (URL tab, or shared) are read through each platform's official public oEmbed endpoint via the SSRF-safe fetcher (new JSON profile), then Meri drafts the recipe from the caption; the post is kept as the source and TikTok's thumbnail offered as cover. Captions too short to hold a recipe, or with no recipe found, point the user to Video / Photo import. X verified live; TikTok's endpoint was unreachable during testing, so it is best effort with that same fallback.
+- Instagram, Facebook, and Threads need a Meta app token for oEmbed, so they stay on screenshot/video import (Threads now detected too).
+- Installable app: `public/manifest.webmanifest` (icons 192/512 from favicon) and `public/sw.js`, registered from the root route. The worker only handles the Share target (POST /share-target → private cache → /app/recipes/import?shared=1); it caches nothing else and adds no offline mode.
+- Import page pre-fills the right tab from a share: video → Video, images → Photo, YouTube → Video, X/TikTok → URL, Instagram/Facebook/Threads → Video with save help (link kept for credit), plain text → Paste. Nothing runs until Extract.
+- Platform limits: Share target works on Android (Chrome/Edge) after installing the app; iOS Safari doesn't support share targets, though "Add to Home Screen" still installs it.
+- Pure helpers in `src/lib/import/social-link.ts` (tested).
 
 ## Working rules
 

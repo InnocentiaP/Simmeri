@@ -23,7 +23,7 @@ export function SaveVideoHelp({ platform }: { platform: SocialPlatform | null })
             screen recording while the Reel plays.
           </li>
         )}
-        {(platform === "Facebook" || platform === "X") && (
+        {(platform === "Facebook" || platform === "X" || platform === "Threads") && (
           <li>
             <strong>{platform}:</strong> there's no download option for other people's videos. Use
             screen recording while the video plays.

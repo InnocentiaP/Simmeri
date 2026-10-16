@@ -49,6 +49,7 @@ describe("detectSocialPlatform", () => {
     assert.equal(detectSocialPlatform("https://www.tiktok.com/@chef/video/1"), "TikTok");
     assert.equal(detectSocialPlatform("https://fb.watch/abc"), "Facebook");
     assert.equal(detectSocialPlatform("https://x.com/chef/status/1"), "X");
+    assert.equal(detectSocialPlatform("https://www.threads.net/@chef/post/abc"), "Threads");
   });
 
   it("ignores ordinary sites", () => {

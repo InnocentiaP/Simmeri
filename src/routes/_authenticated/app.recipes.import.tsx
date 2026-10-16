@@ -33,6 +33,9 @@ import {
   type VideoImportPhase,
 } from "@/lib/import/video-upload";
 import { detectSocialPlatform, parseYouTubeUrl } from "@/lib/import/video-source";
+import { extractFirstUrl, parseSocialPostUrl } from "@/lib/import/social-link";
+import { takeSharedPayload } from "@/lib/import/share-target";
+import { extractRecipeFromSocialLink } from "@/lib/import/recipe-social-import.functions";
 import type { ImportResult } from "@/lib/import/types";
 
 const MAX_PASTE_CHARS = 20_000;
@@ -45,6 +48,14 @@ export const Route = createFileRoute("/_authenticated/app/recipes/import")({
 type SourceMode = "paste" | "url" | "images" | "video";
 
 type PreparedImage = PickedImage & { payload: AiImagePayload };
+
+// Most common sources first; typing a recipe out by hand is the fallback.
+const SOURCE_TABS = [
+  { mode: "url", label: "From a URL", icon: LinkIcon },
+  { mode: "images", label: "Photo / screenshot", icon: ImageIcon },
+  { mode: "video", label: "Video", icon: Film },
+  { mode: "paste", label: "Paste text", icon: FileText },
+] as const satisfies readonly { mode: SourceMode; label: string; icon: unknown }[];
 type Step =
   | { kind: "input" }
   | { kind: "extracting" }
@@ -97,6 +108,50 @@ function ImportRecipe() {
     setPreparingImages(false);
   }, []);
 
+  // Something shared to Simmeri from the phone's Share menu (installed app,
+  // Android): pre-fill the matching tab. Nothing runs until Extract is pressed.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("shared") !== "1") return;
+    window.history.replaceState(null, "", window.location.pathname);
+    void takeSharedPayload().then((shared) => {
+      if (!shared) {
+        toast.info("Nothing came through from that share — try sharing it again.");
+        return;
+      }
+      const video = shared.files.find((f) => f.type.startsWith("video/"));
+      const pictures = shared.files.filter((f) => f.type.startsWith("image/"));
+      const link = shared.url || extractFirstUrl(shared.text) || "";
+
+      if (video) {
+        setMode("video");
+        setVideoFile(video);
+        if (detectSocialPlatform(link)) setVideoUrl(link);
+      } else if (pictures.length > 0) {
+        setMode("images");
+        void addImageFiles(pictures);
+      } else if (link && parseYouTubeUrl(link)) {
+        setMode("video");
+        setVideoUrl(link);
+      } else if (link && detectSocialPlatform(link) && !parseSocialPostUrl(link)) {
+        // Instagram, Facebook, Threads: show how to save the video, keep the link for credit.
+        setMode("video");
+        setVideoUrl(link);
+      } else if (link) {
+        setMode("url");
+        setUrl(link);
+      } else {
+        const text = [shared.title, shared.text].filter(Boolean).join("\n\n").trim();
+        if (!text) {
+          toast.info("Nothing came through from that share — try sharing it again.");
+          return;
+        }
+        setMode("paste");
+        setPasteText(text);
+      }
+      toast.success("Shared to Simmeri — check it, then press Extract recipe.");
+    });
+  }, [addImageFiles]);
+
   function removeImage(id: string) {
     setImages((prev) => {
       const gone = prev.find((img) => img.id === id);
@@ -139,6 +194,17 @@ function ImportRecipe() {
     },
   });
 
+  const socialMutation = useMutation({
+    mutationFn: (link: string) => extractRecipeFromSocialLink({ data: { url: link } }),
+    onSuccess: (result) => setStep({ kind: "review", result }),
+    onError: (e: Error) =>
+      setStep({
+        kind: "error",
+        message:
+          e.message || "Meri couldn't read that post. Try the Video or Photo / screenshot tab.",
+      }),
+  });
+
   const urlMutation = useMutation({
     mutationFn: (u: string) => extractRecipeFromUrl({ data: { url: u } }),
     onSuccess: (result) => setStep({ kind: "review", result }),
@@ -175,6 +241,10 @@ function ImportRecipe() {
       // A YouTube link pasted in the URL tab goes straight to video import.
       setStep({ kind: "extracting" });
       videoMutation.mutate({ url });
+    } else if (parseSocialPostUrl(url)) {
+      // X and TikTok posts: read the caption through the official oEmbed.
+      setStep({ kind: "extracting" });
+      socialMutation.mutate(url);
     } else {
       const platform = detectSocialPlatform(url);
       if (platform) {
@@ -231,43 +301,20 @@ function ImportRecipe() {
               : "Paste the recipe's text below. You'll review and edit everything before it's saved."}
       </p>
 
-      <div className="mb-4 inline-flex rounded-full border border-border bg-background p-1">
-        <button
-          type="button"
-          onClick={() => switchMode("paste")}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
-            mode === "paste" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
-          }`}
-        >
-          <FileText className="h-3.5 w-3.5" /> Paste text
-        </button>
-        <button
-          type="button"
-          onClick={() => switchMode("url")}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
-            mode === "url" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
-          }`}
-        >
-          <LinkIcon className="h-3.5 w-3.5" /> From a URL
-        </button>
-        <button
-          type="button"
-          onClick={() => switchMode("images")}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
-            mode === "images" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
-          }`}
-        >
-          <ImageIcon className="h-3.5 w-3.5" /> Photo / screenshot
-        </button>
-        <button
-          type="button"
-          onClick={() => switchMode("video")}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
-            mode === "video" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
-          }`}
-        >
-          <Film className="h-3.5 w-3.5" /> Video
-        </button>
+      <div className="mb-4 inline-flex flex-wrap rounded-3xl border border-border bg-background p-1">
+        {SOURCE_TABS.map(({ mode: tab, label, icon: Icon }) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => switchMode(tab)}
+            aria-pressed={mode === tab}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
+              mode === tab ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" /> {label}
+          </button>
+        ))}
       </div>
 
       {mode === "video" ? (
@@ -377,8 +424,9 @@ function ImportRecipe() {
             className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
           />
           <p className="mt-1.5 text-xs text-cocoa/60">
-            Works with most recipe blogs and websites, and YouTube links. For Instagram, TikTok, or
-            Facebook posts, use “Video” or “Photo / screenshot”.
+            Works with recipe blogs and websites, YouTube links, and X or TikTok posts whose caption
+            has the recipe. For Instagram, Facebook, or Threads, use “Video” or “Photo /
+            screenshot”.
           </p>
         </div>
       )}
@@ -399,7 +447,9 @@ function ImportRecipe() {
                 ? "Meri is watching the video… (up to a minute)"
                 : mode === "images"
                   ? "Meri is reading your images…"
-                  : "Reading that page… (a few seconds if Meri needs AI)"
+                  : parseSocialPostUrl(url)
+                    ? "Meri is reading the post's caption…"
+                    : "Reading that page… (a few seconds if Meri needs AI)"
             : "Extract recipe"}
         </button>
       </div>
@@ -425,7 +475,10 @@ function ReviewStep({
 
   // The automatic URL import and image import have already used AI.
   const [aiApplied, setAiApplied] = useState(
-    result.method === "ai" || result.method === "images" || result.method === "video",
+    result.method === "ai" ||
+      result.method === "images" ||
+      result.method === "video" ||
+      result.method === "social",
   );
   // An uploaded video is deleted right after reading, so it can't be re-read;
   // a YouTube video (kept as the source URL) can.
@@ -473,6 +526,10 @@ function ReviewStep({
     mutationFn: async () => {
       if (youTubeSource) {
         const r = await importRecipeFromYouTube(youTubeSource);
+        return { draft: r.draft, warnings: r.warnings };
+      }
+      if (result.method === "social" && result.source.url) {
+        const r = await extractRecipeFromSocialLink({ data: { url: result.source.url } });
         return { draft: r.draft, warnings: r.warnings };
       }
       // Image imports retry by re-reading the same images.
@@ -646,15 +703,20 @@ function ReviewStep({
 
 function MethodBadge({ method }: { method: NonNullable<ImportResult["method"]> }) {
   const content =
-    method === "video"
-      ? { icon: Film, label: "Watched by Meri — fill in any amounts the video didn't say" }
-      : method === "images"
-        ? { icon: Sparkles, label: "Read by Meri from your images — double-check before saving" }
-        : method === "ai"
-          ? { icon: Sparkles, label: "Read by Meri with AI — double-check before saving" }
-          : method === "partial"
-            ? { icon: Database, label: "Only part of the recipe could be read" }
-            : { icon: Database, label: "Read from the page's recipe data" };
+    method === "social"
+      ? {
+          icon: Sparkles,
+          label: "Read by Meri from the post's caption — double-check before saving",
+        }
+      : method === "video"
+        ? { icon: Film, label: "Watched by Meri — fill in any amounts the video didn't say" }
+        : method === "images"
+          ? { icon: Sparkles, label: "Read by Meri from your images — double-check before saving" }
+          : method === "ai"
+            ? { icon: Sparkles, label: "Read by Meri with AI — double-check before saving" }
+            : method === "partial"
+              ? { icon: Database, label: "Only part of the recipe could be read" }
+              : { icon: Database, label: "Read from the page's recipe data" };
   const Icon = content.icon;
   return (
     <p className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-olive-deep/10 px-3 py-1 text-xs font-medium text-olive-deep">
