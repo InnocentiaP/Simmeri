@@ -10,6 +10,7 @@ import {
   buildKitchenPresenceIndex,
   classifyIngredientPresence,
   type IngredientPresence,
+  type IngredientKeyFn,
   type KitchenStatus,
   type ReadinessKitchenItem,
 } from "./readiness.ts";
@@ -66,13 +67,14 @@ export function buildCandidatesForSource(
   ingredients: readonly GenerationRecipeIngredient[],
   kitchenIndex: Map<string, KitchenStatus>,
   context: GenerationSourceContext,
+  keyOf?: IngredientKeyFn,
 ): RawIngredientCandidate[] {
   const candidates: RawIngredientCandidate[] = [];
 
   for (const ingredient of ingredients) {
     if (ingredient.importance === "optional") continue;
 
-    const presence = classifyIngredientPresence(ingredient.displayName, kitchenIndex);
+    const presence = classifyIngredientPresence(ingredient.displayName, kitchenIndex, keyOf);
     if (presence === "available") continue;
 
     let scaledQuantityText = ingredient.quantityText;
@@ -155,13 +157,18 @@ function composeUncombinedQuantityText(members: readonly RawIngredientCandidate[
 // requires the candidate's position in this array, not just its unit text,
 // so ineligible-unit candidates are each given their own singleton group
 // here instead of being grouped by the shared (but merge-ineligible) key.
-export function groupCandidates(raw: readonly RawIngredientCandidate[]): GeneratedCandidateItem[] {
+export function groupCandidates(
+  raw: readonly RawIngredientCandidate[],
+  keyOf?: IngredientKeyFn,
+): GeneratedCandidateItem[] {
   const order: string[] = [];
   const groups = new Map<string, RawIngredientCandidate[]>();
 
   raw.forEach((candidate, index) => {
-    const baseKey = computeMergeKey(candidate.displayName, candidate.unit);
-    const key = isUnitMergeEligible(candidate.unit) ? baseKey : `${baseKey}#unsupported-unit-${index}`;
+    const baseKey = computeMergeKey(candidate.displayName, candidate.unit, keyOf);
+    const key = isUnitMergeEligible(candidate.unit)
+      ? baseKey
+      : `${baseKey}#unsupported-unit-${index}`;
     if (!groups.has(key)) {
       groups.set(key, []);
       order.push(key);
@@ -211,13 +218,17 @@ export function generateCandidates(
     ingredients: readonly GenerationRecipeIngredient[];
   }>,
   activeKitchenItems: readonly ReadinessKitchenItem[],
+  keyOf?: IngredientKeyFn,
 ): GeneratedCandidateItem[] {
-  const kitchenIndex = buildKitchenPresenceIndex(activeKitchenItems.filter((k) => !k.archived_at));
+  const kitchenIndex = buildKitchenPresenceIndex(
+    activeKitchenItems.filter((k) => !k.archived_at),
+    keyOf,
+  );
   const raw: RawIngredientCandidate[] = [];
   for (const { context, ingredients } of sources) {
-    raw.push(...buildCandidatesForSource(ingredients, kitchenIndex, context));
+    raw.push(...buildCandidatesForSource(ingredients, kitchenIndex, context, keyOf));
   }
-  return groupCandidates(raw);
+  return groupCandidates(raw, keyOf);
 }
 
 export interface InclusionOptions {
@@ -261,7 +272,10 @@ export function detectAlreadyGenerated(
   return candidates.map((candidate) =>
     candidate.sources.some((s) =>
       existingKeys.has(
-        sourceIdentityKey({ recipeId: s.source.recipeId, mealPlanEntryId: s.source.mealPlanEntryId }),
+        sourceIdentityKey({
+          recipeId: s.source.recipeId,
+          mealPlanEntryId: s.source.mealPlanEntryId,
+        }),
       ),
     ),
   );
@@ -297,7 +311,12 @@ export interface DbRecipeIngredientLike {
   preparation_note: string | null;
 }
 
-const KNOWN_IMPORTANCE: readonly GenerationImportance[] = ["core", "supporting", "seasoning", "optional"];
+const KNOWN_IMPORTANCE: readonly GenerationImportance[] = [
+  "core",
+  "supporting",
+  "seasoning",
+  "optional",
+];
 
 export function toGenerationIngredients(
   rows: readonly DbRecipeIngredientLike[],

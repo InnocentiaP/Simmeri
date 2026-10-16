@@ -4,11 +4,7 @@
 export type Importance = "core" | "supporting" | "seasoning" | "optional";
 export type KitchenStatus = "available" | "running_low" | "out_of_stock" | "unknown";
 export type ReadinessLabel =
-  | "ready_to_cook"
-  | "check_first"
-  | "almost_ready"
-  | "needs_shopping"
-  | "not_ready";
+  "ready_to_cook" | "check_first" | "almost_ready" | "needs_shopping" | "not_ready";
 
 export interface ReadinessIngredient {
   id?: string;
@@ -41,6 +37,11 @@ export interface ReadinessResult {
 
 const norm = (s: string) => s.trim().toLowerCase();
 
+// Turns an ingredient name into a comparison key (see
+// src/lib/ingredients/matcher.ts). Optional everywhere below: without one,
+// matching is the original exact-text comparison.
+export type IngredientKeyFn = (name: string) => string;
+
 // Generic ingredient-presence classification, independent of importance —
 // this is the reuse point for Shopping Generation (Wave 2 Checkpoint 3),
 // which needs the same Kitchen-matching logic but not the readiness-label
@@ -64,13 +65,16 @@ const KITCHEN_STATUS_PRIORITY: Record<KitchenStatus, number> = {
 // archived rows (computeReadiness does this before calling in).
 export function buildKitchenPresenceIndex(
   activeKitchenItems: ReadinessKitchenItem[],
+  keyOf?: IngredientKeyFn,
 ): Map<string, KitchenStatus> {
   const byName = new Map<string, KitchenStatus>();
   for (const k of activeKitchenItems) {
-    const key = k.normalized_name ?? norm(k.ingredient_name);
-    const status = (["available", "running_low", "out_of_stock", "unknown"].includes(k.status)
-      ? k.status
-      : "unknown") as KitchenStatus;
+    const key = keyOf ? keyOf(k.ingredient_name) : (k.normalized_name ?? norm(k.ingredient_name));
+    const status = (
+      ["available", "running_low", "out_of_stock", "unknown"].includes(k.status)
+        ? k.status
+        : "unknown"
+    ) as KitchenStatus;
     const prev = byName.get(key);
     if (!prev || KITCHEN_STATUS_PRIORITY[status] > KITCHEN_STATUS_PRIORITY[prev]) {
       byName.set(key, status);
@@ -87,8 +91,9 @@ export function buildKitchenPresenceIndex(
 export function classifyIngredientPresence(
   displayName: string,
   presenceIndex: Map<string, KitchenStatus>,
+  keyOf?: IngredientKeyFn,
 ): IngredientPresence {
-  const status = presenceIndex.get(norm(displayName));
+  const status = presenceIndex.get(keyOf ? keyOf(displayName) : norm(displayName));
   if (!status || status === "out_of_stock") return "missing";
   if (status === "unknown") return "needs_check";
   if (status === "running_low") return "running_low";
@@ -98,9 +103,10 @@ export function classifyIngredientPresence(
 export function computeReadiness(
   ingredients: ReadinessIngredient[],
   kitchenItems: ReadinessKitchenItem[],
+  keyOf?: IngredientKeyFn,
 ): ReadinessResult {
   const activeKitchen = kitchenItems.filter((k) => !k.archived_at);
-  const byName = buildKitchenPresenceIndex(activeKitchen);
+  const byName = buildKitchenPresenceIndex(activeKitchen, keyOf);
 
   const exp: ReadinessExplanation = {
     available: [],
@@ -118,7 +124,7 @@ export function computeReadiness(
       exp.ignored_optional.push(name);
       continue;
     }
-    const presence = classifyIngredientPresence(name, byName);
+    const presence = classifyIngredientPresence(name, byName, keyOf);
     if (presence === "missing") {
       if (ing.importance === "core") exp.missing_core.push(name);
       else if (ing.importance === "seasoning") exp.missing_seasoning.push(name);

@@ -79,8 +79,12 @@ export function isUnitMergeEligible(unit: string | null | undefined): boolean {
   return normalized in UNIT_ALIASES;
 }
 
-export function computeMergeKey(name: string, unit: string | null | undefined): string {
-  return `${normalizeIngredientName(name)}::${canonicalUnit(unit) ?? ""}`;
+export function computeMergeKey(
+  name: string,
+  unit: string | null | undefined,
+  keyOf?: (name: string) => string,
+): string {
+  return `${keyOf ? keyOf(name) : normalizeIngredientName(name)}::${canonicalUnit(unit) ?? ""}`;
 }
 
 const AMBIGUOUS_QUANTITY_RE = /to taste|as needed|handful|^a\s|^an\s/i;
@@ -128,8 +132,7 @@ export function formatQuantityValue(value: number): string {
 }
 
 export type CombineQuantitiesResult =
-  | { combinable: true; combinedValue: number; combinedText: string }
-  | { combinable: false };
+  { combinable: true; combinedValue: number; combinedText: string } | { combinable: false };
 
 // Sums every quantity text in the list only when ALL of them parse safely.
 // A single unparseable/ambiguous entry makes the whole group not

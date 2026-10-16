@@ -627,6 +627,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ingredient_links: {
+        Row: {
+          alias_normalized: string
+          created_at: string
+          id: string
+          target_normalized: string
+          user_id: string
+        }
+        Insert: {
+          alias_normalized: string
+          created_at?: string
+          id?: string
+          target_normalized: string
+          user_id: string
+        }
+        Update: {
+          alias_normalized?: string
+          created_at?: string
+          id?: string
+          target_normalized?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

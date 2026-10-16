@@ -2,8 +2,14 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { listKitchenItems, createKitchenItem, updateKitchenItem, type ShoppingListItem } from "@/lib/api";
+import {
+  listKitchenItems,
+  createKitchenItem,
+  updateKitchenItem,
+  type ShoppingListItem,
+} from "@/lib/api";
 import { decideKitchenUpdateTargets, type KitchenUpdateDecision } from "@/lib/kitchen-update-plan";
+import { useIngredientMatcher } from "@/lib/ingredients/use-ingredient-matcher";
 
 const STATUSES = [
   { value: "available", label: "Available" },
@@ -60,9 +66,13 @@ function initialSelection(decision: KitchenUpdateDecision): string {
 // items into Kitchen Inventory changes. Nothing here runs until the user
 // presses Submit — checking an item as purchased (elsewhere) never reaches
 // Kitchen on its own.
-export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenUpdateConfirmDialogProps) {
+export function KitchenUpdateConfirmDialog({
+  purchasedItems,
+  onClose,
+}: KitchenUpdateConfirmDialogProps) {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const keyOf = useIngredientMatcher();
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<Map<string, RowResult> | null>(null);
 
@@ -82,8 +92,9 @@ export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenU
         storageLocation: k.storage_location,
         archivedAt: k.archived_at,
       })),
+      keyOf,
     );
-  }, [purchasedItems, kitchenQuery.data]);
+  }, [purchasedItems, kitchenQuery.data, keyOf]);
 
   const [rowState, setRowState] = useState<Map<string, RowUIState>>(new Map());
 
@@ -142,7 +153,10 @@ export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenU
           });
         } else {
           const targetId = state.selection.slice("update:".length);
-          await updateKitchenItem(targetId, { status: state.status, storageLocation: state.location });
+          await updateKitchenItem(targetId, {
+            status: state.status,
+            storageLocation: state.location,
+          });
         }
         return { purchasedItemId: decision.purchasedItemId, kind: "success" as const };
       }),
@@ -154,10 +168,14 @@ export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenU
     outcomes.forEach((outcome, idx) => {
       const purchasedItemId = rows[idx].decision.purchasedItemId;
       if (outcome.status === "fulfilled") {
-        nextResults.set(purchasedItemId, outcome.value.kind === "skipped" ? { kind: "skipped" } : { kind: "success" });
+        nextResults.set(
+          purchasedItemId,
+          outcome.value.kind === "skipped" ? { kind: "skipped" } : { kind: "success" },
+        );
         if (outcome.value.kind === "success") successCount += 1;
       } else {
-        const message = outcome.reason instanceof Error ? outcome.reason.message : "Failed to update Kitchen.";
+        const message =
+          outcome.reason instanceof Error ? outcome.reason.message : "Failed to update Kitchen.";
         nextResults.set(purchasedItemId, { kind: "error", message });
         failureCount += 1;
       }
@@ -172,7 +190,9 @@ export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenU
     if (failureCount === 0 && successCount > 0) {
       toast.success(`Kitchen updated (${successCount} item${successCount === 1 ? "" : "s"}).`);
     } else if (failureCount > 0 && successCount > 0) {
-      toast.warning(`Updated ${successCount} item${successCount === 1 ? "" : "s"}, ${failureCount} failed.`);
+      toast.warning(
+        `Updated ${successCount} item${successCount === 1 ? "" : "s"}, ${failureCount} failed.`,
+      );
     } else if (failureCount > 0) {
       toast.error(`${failureCount} Kitchen update${failureCount === 1 ? "" : "s"} failed.`);
     }
@@ -186,7 +206,9 @@ export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenU
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-3xl bg-background p-6 shadow-[var(--shadow-paper)]">
-        <h3 className="mb-1 font-display text-lg font-semibold text-cocoa">Update Kitchen from purchased items</h3>
+        <h3 className="mb-1 font-display text-lg font-semibold text-cocoa">
+          Update Kitchen from purchased items
+        </h3>
         <p className="mb-4 text-sm text-cocoa/70">
           Review each item below, then confirm. Nothing changes in Kitchen until you submit.
         </p>
@@ -207,7 +229,10 @@ export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenU
                     ? decision.action.candidates
                     : [];
               return (
-                <li key={decision.purchasedItemId} className="rounded-xl border border-border/60 p-3">
+                <li
+                  key={decision.purchasedItemId}
+                  className="rounded-xl border border-border/60 p-3"
+                >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-sm font-medium text-cocoa">{decision.displayName}</p>
                     {decision.action.kind === "ambiguous" && !result && (
@@ -256,7 +281,9 @@ export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenU
                         <>
                           <select
                             value={state.status}
-                            onChange={(e) => updateRow(decision.purchasedItemId, { status: e.target.value })}
+                            onChange={(e) =>
+                              updateRow(decision.purchasedItemId, { status: e.target.value })
+                            }
                             className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
                           >
                             {STATUSES.map((s) => (
@@ -267,7 +294,9 @@ export function KitchenUpdateConfirmDialog({ purchasedItems, onClose }: KitchenU
                           </select>
                           <select
                             value={state.location}
-                            onChange={(e) => updateRow(decision.purchasedItemId, { location: e.target.value })}
+                            onChange={(e) =>
+                              updateRow(decision.purchasedItemId, { location: e.target.value })
+                            }
                             className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
                           >
                             {LOCATIONS.map((l) => (

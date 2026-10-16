@@ -10,7 +10,8 @@ The active roadmap closes the gap between what the landing page promises and wha
 |---|---|---|
 | 0 | Revive infrastructure: resume Supabase project, verify schema, Gemini model update | Done |
 | 1 | Cooking loop: cooking rating ("loved it"), recipe favorites, confirmed post-cooking Kitchen update, "last time you cooked this" on recipe detail | **In review** (branch `feat/phase-1-cooking-loop`) |
-| 2 | Smart ingredient matching: Wave 3 Checkpoints 3.2 + 3.3 (`docs/plans/WAVE_3_CANONICAL_INGREDIENTS_AND_RECOMMENDATIONS_PLAN.md`), shared readiness hook | Not started |
+| 2 | Smart ingredient matching (read-time matcher, broader catalog, personal links) | **In review** (branch `feat/phase-2-ingredient-matching`) |
+| 2b | Measurement conversion on Recipe Detail (Original / Metric / US, default from Settings; cups→grams via per-ingredient density in the catalog) | Not started |
 | 3 | Suggestions + Tonight's Deck: Wave 3 Checkpoints 3.4 + 3.5, dashboard suggestions, `/app/tonight` with swipe (via the installed `motion` library) layered on top of button + keyboard controls | **In review** — done before Phase 2 by owner request; recommendations use today's exact-name matching and improve automatically once Phase 2 lands |
 | 4 | Trust: data export, onboarding (kitchen staples), timezone actually applied | Not started |
 | 5 | Landing copy alignment (copy only, no redesign) for promises deferred below; also update `TonightsDeck.tsx` copy ("Three ideas", "short deck instead of an endless feed") to match the endless deck | Not started |
@@ -89,6 +90,16 @@ Notes:
 - Import page pre-fills the right tab from a share: video → Video, images → Photo, YouTube → Video, X/TikTok → URL, Instagram/Facebook/Threads → Video with save help (link kept for credit), plain text → Paste. Nothing runs until Extract.
 - Platform limits: Share target works on Android (Chrome/Edge) after installing the app; iOS Safari doesn't support share targets, though "Add to Home Screen" still installs it.
 - Pure helpers in `src/lib/import/social-link.ts` (tested).
+
+## Phase 2 — smart ingredient matching
+
+Design change from Wave 3 §C (stored `canonical_ingredient_id` on rows): matching is computed **when data is read** by `src/lib/ingredients/matcher.ts`. No columns are added to `recipe_ingredients`/`kitchen_items`, `save_recipe_with_details` is untouched (removing Wave 3's top risk — matches lost on every recipe re-save), there is no backfill, and a new alias or link applies everywhere immediately. Trade-off: no per-recipe "confirmed" state; a correction is a personal link that applies to the name everywhere.
+
+- Resolution order: personal link (one hop) → catalog alias (user-owned, then global; exact, then plural-insensitive key) → plural-insensitive text. A plural stem shared by two catalog ingredients is dropped, never merged.
+- Wired into readiness, shopping generation and merging, purchase → Kitchen updates, post-cook Kitchen updates, recommendations, dashboard, planner, and recipe pages via an optional `keyOf` parameter; without it every function keeps its original exact-text behaviour (all prior tests unchanged).
+- Migration `20261017010000_ingredient_matching.sql`: `user_ingredient_links` (owner-only RLS) and a catalog expansion to 83 canonical ingredients / 220 aliases (English + Indonesian), validated for duplicate aliases and plural-stem collisions. Ambiguous words stay out (e.g. "cabai" alone, "pepper", "merica"/"lada", "cheese").
+- "I have this" on missing ingredients (Recipe Detail) links the name to a Kitchen item; Settings → "Ingredient matches" lists and removes links.
+- Degrades gracefully before the migration is applied (text + plural matching only).
 
 ## Working rules
 

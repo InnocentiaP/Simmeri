@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { listKitchenItems, listRecipeIngredientsForRecipeIds, updateKitchenItem } from "@/lib/api";
+import { getIngredientMatcher } from "@/lib/ingredients/use-ingredient-matcher";
 import {
   buildPostCookRows,
   planPostCookUpdates,
@@ -41,9 +42,10 @@ export function PostCookKitchenDialog({ recipeId, onClose }: PostCookKitchenDial
   const dataQuery = useQuery({
     queryKey: ["post-cook-kitchen", recipeId],
     queryFn: async () => {
-      const [ingredients, kitchen] = await Promise.all([
+      const [ingredients, kitchen, keyOf] = await Promise.all([
         listRecipeIngredientsForRecipeIds([recipeId]),
         listKitchenItems(false),
+        getIngredientMatcher(qc),
       ]);
       return buildPostCookRows(
         ingredients.map((i) => ({
@@ -58,6 +60,7 @@ export function PostCookKitchenDialog({ recipeId, onClose }: PostCookKitchenDial
           storageLocation: k.storage_location,
           archivedAt: k.archived_at,
         })),
+        keyOf,
       );
     },
     staleTime: 0,

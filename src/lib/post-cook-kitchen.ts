@@ -47,10 +47,11 @@ const IMPORTANCE_ORDER: Record<PostCookImportance, number> = {
 export function buildPostCookRows(
   ingredients: readonly PostCookIngredientInput[],
   activeKitchenItems: readonly ActiveKitchenItemInput[],
+  keyOf: (name: string) => string = normalizeKitchenCandidateName,
 ): PostCookRow[] {
   const firstByName = new Map<string, PostCookIngredientInput>();
   for (const ing of ingredients) {
-    const key = normalizeKitchenCandidateName(ing.displayName);
+    const key = keyOf(ing.displayName);
     if (!key) continue;
     const existing = firstByName.get(key);
     // Keep the most important classification when a name appears twice.
@@ -63,6 +64,7 @@ export function buildPostCookRows(
   const decisions = decideKitchenUpdateTargets(
     unique.map((ing) => ({ id: ing.id, displayName: ing.displayName })),
     activeKitchenItems,
+    keyOf,
   );
 
   const rows: PostCookRow[] = [];

@@ -40,7 +40,12 @@ export function normalizeKitchenCandidateName(name: string): string {
 }
 
 function toCandidate(item: ActiveKitchenItemInput): KitchenCandidate {
-  return { id: item.id, name: item.name, status: item.status, storageLocation: item.storageLocation };
+  return {
+    id: item.id,
+    name: item.name,
+    status: item.status,
+    storageLocation: item.storageLocation,
+  };
 }
 
 // For each purchased item, classify the Kitchen-update action:
@@ -52,17 +57,20 @@ function toCandidate(item: ActiveKitchenItemInput): KitchenCandidate {
 export function decideKitchenUpdateTargets(
   purchasedItems: readonly PurchasedItemInput[],
   activeKitchenItems: readonly ActiveKitchenItemInput[],
+  // Optional ingredient matcher (src/lib/ingredients/matcher.ts); defaults
+  // to exact normalized-name matching.
+  keyOf: (name: string) => string = normalizeKitchenCandidateName,
 ): KitchenUpdateDecision[] {
   const active = activeKitchenItems.filter((k) => !k.archivedAt);
 
   const byNormalizedName = new Map<string, ActiveKitchenItemInput[]>();
   for (const item of active) {
-    const key = normalizeKitchenCandidateName(item.name);
+    const key = keyOf(item.name);
     byNormalizedName.set(key, [...(byNormalizedName.get(key) ?? []), item]);
   }
 
   return purchasedItems.map((purchased) => {
-    const key = normalizeKitchenCandidateName(purchased.displayName);
+    const key = keyOf(purchased.displayName);
     const matches = byNormalizedName.get(key) ?? [];
 
     let action: KitchenUpdateAction;

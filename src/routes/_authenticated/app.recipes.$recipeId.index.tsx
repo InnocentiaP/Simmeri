@@ -13,6 +13,10 @@ import {
 } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  getIngredientMatcher,
+  useIngredientMatcher,
+} from "@/lib/ingredients/use-ingredient-matcher";
+import {
   computeReadiness,
   readinessDisplay,
   readinessTone,
@@ -25,6 +29,7 @@ import { CollectionPicker } from "@/components/app/CollectionPicker";
 import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
 import { CookingHistoryList } from "@/components/app/CookingHistoryList";
 import { LastCookedSummary } from "@/components/app/LastCookedSummary";
+import { IngredientLinkPicker } from "@/components/app/IngredientLinkPicker";
 import { PostCookKitchenDialog } from "@/components/app/PostCookKitchenDialog";
 import { MealPlanEntryForm } from "@/components/app/MealPlanEntryForm";
 import { ShoppingGenerationReview } from "@/components/app/ShoppingGenerationReview";
@@ -62,12 +67,16 @@ function RecipeDetail() {
   const { recipeId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const keyOf = useIngredientMatcher();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showCollectionPicker, setShowCollectionPicker] = useState(false);
   const [showMarkCooked, setShowMarkCooked] = useState(false);
   const [showPostCookKitchen, setShowPostCookKitchen] = useState(false);
+  const [linkingIngredient, setLinkingIngredient] = useState<string | null>(null);
   const [showAddToPlan, setShowAddToPlan] = useState(false);
-  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(null);
+  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(
+    null,
+  );
 
   const collectionsQuery = useQuery({
     queryKey: ["collections", true],
@@ -86,7 +95,10 @@ function RecipeDetail() {
     queryFn: async () => {
       const detail = await getRecipeDetail(recipeId);
       if (!detail) return null;
-      const kit = await supabase.from("kitchen_items").select("*").is("archived_at", null);
+      const [kit, keyOf] = await Promise.all([
+        supabase.from("kitchen_items").select("*").is("archived_at", null),
+        getIngredientMatcher(qc),
+      ]);
       if (kit.error) throw kit.error;
       const readiness = computeReadiness(
         detail.ingredients.map((i) => ({
@@ -94,6 +106,7 @@ function RecipeDetail() {
           importance: i.importance as "core" | "supporting" | "seasoning" | "optional",
         })),
         kit.data ?? [],
+        keyOf,
       );
       return { ...detail, readiness, kitchenItems: kit.data ?? [] };
     },
@@ -175,6 +188,7 @@ function RecipeDetail() {
     const generated = generateCandidates(
       [{ context, ingredients: toGenerationIngredients(data.ingredients) }],
       data.kitchenItems,
+      keyOf,
     );
     setGeneratedCandidates(generated);
   }
@@ -209,7 +223,10 @@ function RecipeDetail() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link to="/app/recipes" className="mb-3 inline-flex items-center gap-1 text-sm text-cocoa hover:underline">
+      <Link
+        to="/app/recipes"
+        className="mb-3 inline-flex items-center gap-1 text-sm text-cocoa hover:underline"
+      >
         <ChevronLeft className="h-4 w-4" /> Back to recipes
       </Link>
 
@@ -380,9 +397,21 @@ function RecipeDetail() {
           <ExpList label="Available" items={readiness.explanation.available} />
           <ExpList label="Running low" items={readiness.explanation.running_low} />
           <ExpList label="Check first" items={readiness.explanation.needs_check} />
-          <ExpList label="Missing core" items={readiness.explanation.missing_core} />
-          <ExpList label="Missing supporting" items={readiness.explanation.missing_supporting} />
-          <ExpList label="Missing seasoning" items={readiness.explanation.missing_seasoning} />
+          <ExpList
+            label="Missing core"
+            items={readiness.explanation.missing_core}
+            onHaveIt={setLinkingIngredient}
+          />
+          <ExpList
+            label="Missing supporting"
+            items={readiness.explanation.missing_supporting}
+            onHaveIt={setLinkingIngredient}
+          />
+          <ExpList
+            label="Missing seasoning"
+            items={readiness.explanation.missing_seasoning}
+            onHaveIt={setLinkingIngredient}
+          />
           <ExpList label="Optional (ignored)" items={readiness.explanation.ignored_optional} />
         </div>
       </section>
@@ -439,7 +468,10 @@ function RecipeDetail() {
         </section>
       )}
 
-      <section id="cooking-history" className="scroll-mt-6 rounded-3xl border border-border/70 bg-background p-5">
+      <section
+        id="cooking-history"
+        className="scroll-mt-6 rounded-3xl border border-border/70 bg-background p-5"
+      >
         <h2 className="mb-3 font-display text-xl font-semibold text-olive-deep">Cooking History</h2>
         <CookingHistoryList recipeId={recipeId} recipe={recipe} />
       </section>
@@ -454,6 +486,13 @@ function RecipeDetail() {
             setShowPostCookKitchen(true);
           }}
           onClose={() => setShowMarkCooked(false)}
+        />
+      )}
+
+      {linkingIngredient && (
+        <IngredientLinkPicker
+          ingredientName={linkingIngredient}
+          onClose={() => setLinkingIngredient(null)}
         />
       )}
 
@@ -513,12 +552,38 @@ function RecipeDetail() {
   );
 }
 
-function ExpList({ label, items }: { label: string; items: string[] }) {
+function ExpList({
+  label,
+  items,
+  onHaveIt,
+}: {
+  label: string;
+  items: string[];
+  // Missing items offer "I have this" to link the name to a Kitchen item.
+  onHaveIt?: (name: string) => void;
+}) {
   if (items.length === 0) return null;
   return (
     <div>
       <div className="text-xs font-medium uppercase tracking-wide text-cocoa/60">{label}</div>
-      <p className="text-cocoa">{items.join(", ")}</p>
+      {onHaveIt ? (
+        <ul className="mt-0.5 flex flex-col gap-1">
+          {items.map((name) => (
+            <li key={name} className="flex flex-wrap items-center gap-2 text-cocoa">
+              {name}
+              <button
+                type="button"
+                onClick={() => onHaveIt(name)}
+                className="rounded-full border border-border bg-background px-2 py-0.5 text-[11px] text-cocoa/80 hover:bg-cream-deep/40"
+              >
+                I have this
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-cocoa">{items.join(", ")}</p>
+      )}
     </div>
   );
 }

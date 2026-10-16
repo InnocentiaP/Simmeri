@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getIngredientMatcher } from "@/lib/ingredients/use-ingredient-matcher";
 import {
   listCookingHistorySummaryRows,
   listKitchenItems,
@@ -28,15 +29,17 @@ export const RECOMMENDATION_QUERY_KEY = ["recommendations"] as const;
 // the same computeReadiness used everywhere else, so a recipe's label here
 // always matches its label on Recipe Detail.
 export function useRecommendationData() {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: RECOMMENDATION_QUERY_KEY,
     queryFn: async (): Promise<RecommendationData> => {
       const today = new Date();
-      const [recipes, kitchen, historyRows, planned] = await Promise.all([
+      const [recipes, kitchen, historyRows, planned, keyOf] = await Promise.all([
         listRecipes(false),
         listKitchenItems(false),
         listCookingHistorySummaryRows(),
         listMealPlanEntriesInRange(formatDateKey(today), formatDateKey(addDays(today, 6))),
+        getIngredientMatcher(qc),
       ]);
       const ingredients = await listRecipeIngredientsForRecipeIds(recipes.map((r) => r.id));
 
@@ -63,7 +66,11 @@ export function useRecommendationData() {
       const inputs: RecommendationInput[] = [];
 
       for (const recipe of recipes) {
-        const readiness = computeReadiness(ingredientsByRecipe.get(recipe.id) ?? [], kitchen);
+        const readiness = computeReadiness(
+          ingredientsByRecipe.get(recipe.id) ?? [],
+          kitchen,
+          keyOf,
+        );
         const cooking = cookingById.get(recipe.id);
         const exp = readiness.explanation;
         const minutes =

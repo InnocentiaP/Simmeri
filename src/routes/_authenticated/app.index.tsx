@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getIngredientMatcher } from "@/lib/ingredients/use-ingredient-matcher";
 import { supabase } from "@/integrations/supabase/client";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
 import { BookOpen, Plus, Refrigerator, ChefHat, CalendarDays, ShoppingCart } from "lucide-react";
@@ -14,28 +15,35 @@ export const Route = createFileRoute("/_authenticated/app/")({
 });
 
 function useDashboardData() {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
       const todayKey = formatDateKey(new Date());
       const weekAheadKey = formatDateKey(addDays(new Date(), 6));
-      const [recipesRes, ingredientsRes, kitchenRes, mealPlanRes, shoppingCountRes] = await Promise.all([
-        supabase.from("recipes").select("*").is("archived_at", null).order("created_at", { ascending: false }),
-        supabase.from("recipe_ingredients").select("*"),
-        supabase.from("kitchen_items").select("*").is("archived_at", null),
-        supabase
-          .from("meal_plan_entries")
-          .select("*")
-          .eq("status", "planned")
-          .gte("planned_date", todayKey)
-          .lte("planned_date", weekAheadKey)
-          .order("planned_date", { ascending: true })
-          .order("position", { ascending: true }),
-        supabase
-          .from("shopping_list_items")
-          .select("id", { count: "exact", head: true })
-          .eq("is_purchased", false),
-      ]);
+      const keyOf = await getIngredientMatcher(qc);
+      const [recipesRes, ingredientsRes, kitchenRes, mealPlanRes, shoppingCountRes] =
+        await Promise.all([
+          supabase
+            .from("recipes")
+            .select("*")
+            .is("archived_at", null)
+            .order("created_at", { ascending: false }),
+          supabase.from("recipe_ingredients").select("*"),
+          supabase.from("kitchen_items").select("*").is("archived_at", null),
+          supabase
+            .from("meal_plan_entries")
+            .select("*")
+            .eq("status", "planned")
+            .gte("planned_date", todayKey)
+            .lte("planned_date", weekAheadKey)
+            .order("planned_date", { ascending: true })
+            .order("position", { ascending: true }),
+          supabase
+            .from("shopping_list_items")
+            .select("id", { count: "exact", head: true })
+            .eq("is_purchased", false),
+        ]);
       if (recipesRes.error) throw recipesRes.error;
       if (ingredientsRes.error) throw ingredientsRes.error;
       if (kitchenRes.error) throw kitchenRes.error;
@@ -54,13 +62,20 @@ function useDashboardData() {
             display_name: i.display_name,
             importance: i.importance as "core" | "supporting" | "seasoning" | "optional",
           }));
-        readinessByRecipe.set(r.id, computeReadiness(rIng, kitchen));
+        readinessByRecipe.set(r.id, computeReadiness(rIng, kitchen, keyOf));
       }
       const todaysMeals = mealPlanEntries.filter((e) => e.planned_date === todayKey);
       // Today has nothing planned — look ahead up to 6 more days for the
       // single next planned meal rather than showing a bare empty state.
       const nextMeal = todaysMeals.length === 0 ? (mealPlanEntries[0] ?? null) : null;
-      return { recipes, kitchen, readinessByRecipe, todaysMeals, nextMeal, unpurchasedShoppingCount };
+      return {
+        recipes,
+        kitchen,
+        readinessByRecipe,
+        todaysMeals,
+        nextMeal,
+        unpurchasedShoppingCount,
+      };
     },
   });
 }
@@ -71,7 +86,11 @@ function Dashboard() {
 
   if (isLoading) return <div className="text-cocoa/70">Loading your kitchen…</div>;
   if (error)
-    return <div className="rounded-xl border border-terracotta/40 bg-terracotta/5 p-4 text-terracotta">Failed to load. Refresh to try again.</div>;
+    return (
+      <div className="rounded-xl border border-terracotta/40 bg-terracotta/5 p-4 text-terracotta">
+        Failed to load. Refresh to try again.
+      </div>
+    );
 
   const recipes = data?.recipes ?? [];
   const kitchen = data?.kitchen ?? [];
@@ -87,8 +106,12 @@ function Dashboard() {
   return (
     <div className="mx-auto max-w-5xl">
       <header className="mb-6">
-        <p className="text-sm text-cocoa/70">Welcome back{user?.email ? `, ${user.email.split("@")[0]}` : ""}.</p>
-        <h1 className="font-display text-3xl font-semibold text-olive-deep">Your kitchen at a glance</h1>
+        <p className="text-sm text-cocoa/70">
+          Welcome back{user?.email ? `, ${user.email.split("@")[0]}` : ""}.
+        </p>
+        <h1 className="font-display text-3xl font-semibold text-olive-deep">
+          Your kitchen at a glance
+        </h1>
       </header>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -135,7 +158,12 @@ function Dashboard() {
             <span className="font-medium text-cocoa">
               {recipeById.get(nextMeal.recipe_id)?.title ?? "a recipe"}
             </span>{" "}
-            on {new Date(nextMeal.planned_date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}{" "}
+            on{" "}
+            {new Date(nextMeal.planned_date + "T00:00:00").toLocaleDateString(undefined, {
+              weekday: "long",
+              month: "short",
+              day: "numeric",
+            })}{" "}
             ({nextMeal.meal_type}).
           </div>
         )}
@@ -197,10 +225,14 @@ function Dashboard() {
                     />
                     <div className="min-w-0 flex-1">
                       <h3 className="font-display text-lg font-semibold text-cocoa">{r.title}</h3>
-                      {r.description && <p className="mt-1 line-clamp-2 text-sm text-cocoa/70">{r.description}</p>}
+                      {r.description && (
+                        <p className="mt-1 line-clamp-2 text-sm text-cocoa/70">{r.description}</p>
+                      )}
                       {rd && (
                         <div className="mt-3 flex items-center gap-2">
-                          <span className={`rounded-full border px-2.5 py-1 text-xs ${readinessTone(rd.label)}`}>
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-xs ${readinessTone(rd.label)}`}
+                          >
                             {readinessDisplay(rd.label)}
                           </span>
                           <span className="text-xs text-cocoa/60">{rd.short}</span>
@@ -220,11 +252,7 @@ function Dashboard() {
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: "ready" | "warm" }) {
   const toneCls =
-    tone === "ready"
-      ? "text-olive-deep"
-      : tone === "warm"
-        ? "text-caramel"
-        : "text-cocoa";
+    tone === "ready" ? "text-olive-deep" : tone === "warm" ? "text-caramel" : "text-cocoa";
   return (
     <div className="rounded-2xl border border-border/70 bg-background p-4">
       <div className={`font-display text-3xl font-semibold ${toneCls}`}>{value}</div>
@@ -265,7 +293,9 @@ function EmptyState() {
     <div className="flex flex-col items-center rounded-3xl border border-dashed border-border bg-cream/40 p-8 text-center">
       <ChefHat className="mb-3 h-8 w-8 text-olive-deep" />
       <h3 className="font-display text-lg font-semibold text-cocoa">No recipes yet</h3>
-      <p className="mt-1 max-w-sm text-sm text-cocoa/70">Add your first recipe and Meri will help you see what you can cook tonight.</p>
+      <p className="mt-1 max-w-sm text-sm text-cocoa/70">
+        Add your first recipe and Meri will help you see what you can cook tonight.
+      </p>
       <Link
         to="/app/recipes/new"
         className="mt-4 rounded-full bg-olive-deep px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-olive"

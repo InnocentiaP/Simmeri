@@ -1,6 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getIngredientMatcher,
+  useIngredientMatcher,
+} from "@/lib/ingredients/use-ingredient-matcher";
 import { useMemo, useState } from "react";
 import { computeReadiness, readinessDisplay, readinessTone } from "@/lib/readiness";
 import {
@@ -40,15 +44,17 @@ export const Route = createFileRoute("/_authenticated/app/recipes/")({
 });
 
 function useRecipesWithReadiness(includeArchived: boolean) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ["recipes-list", includeArchived],
     queryFn: async () => {
       let q = supabase.from("recipes").select("*").order("created_at", { ascending: false });
       if (!includeArchived) q = q.is("archived_at", null);
-      const [recipesRes, ingRes, kitRes] = await Promise.all([
+      const [recipesRes, ingRes, kitRes, keyOf] = await Promise.all([
         q,
         supabase.from("recipe_ingredients").select("*"),
         supabase.from("kitchen_items").select("*").is("archived_at", null),
+        getIngredientMatcher(qc),
       ]);
       if (recipesRes.error) throw recipesRes.error;
       if (ingRes.error) throw ingRes.error;
@@ -63,7 +69,7 @@ function useRecipesWithReadiness(includeArchived: boolean) {
             display_name: i.display_name,
             importance: i.importance as "core" | "supporting" | "seasoning" | "optional",
           }));
-        return { recipe: r, readiness: computeReadiness(rIng, kitchen) };
+        return { recipe: r, readiness: computeReadiness(rIng, kitchen, keyOf) };
       });
     },
   });
@@ -76,7 +82,9 @@ function RecipesList() {
   const [collectionFilter, setCollectionFilter] = useState<string>("all");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(null);
+  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(
+    null,
+  );
   const { data, isLoading, error } = useRecipesWithReadiness(showArchived);
   const qc = useQueryClient();
 
@@ -97,9 +105,10 @@ function RecipesList() {
   const generatePreviewMut = useMutation({
     mutationFn: async () => {
       const ids = Array.from(selectedIds);
-      const [ingredients, kitchen] = await Promise.all([
+      const [ingredients, kitchen, keyOf] = await Promise.all([
         listRecipeIngredientsForRecipeIds(ids),
         listKitchenItems(false),
+        getIngredientMatcher(qc),
       ]);
       const recipesById = new Map((data ?? []).map(({ recipe }) => [recipe.id, recipe]));
       const sources = ids
@@ -107,12 +116,16 @@ function RecipesList() {
           const recipe = recipesById.get(id);
           if (!recipe) return null;
           return {
-            context: buildDirectRecipeContext({ id: recipe.id, title: recipe.title, servings: recipe.servings }),
+            context: buildDirectRecipeContext({
+              id: recipe.id,
+              title: recipe.title,
+              servings: recipe.servings,
+            }),
             ingredients: toGenerationIngredients(ingredients.filter((i) => i.recipe_id === id)),
           };
         })
         .filter((s): s is NonNullable<typeof s> => s !== null);
-      return generateCandidates(sources, kitchen);
+      return generateCandidates(sources, kitchen, keyOf);
     },
     onSuccess: (generated) => setGeneratedCandidates(generated),
     onError: (e: Error) => toast.error(e.message),
@@ -307,11 +320,7 @@ function RecipesList() {
                 />
               </label>
             )}
-            <Link
-              to="/app/recipes/$recipeId"
-              params={{ recipeId: recipe.id }}
-              className="block"
-            >
+            <Link to="/app/recipes/$recipeId" params={{ recipeId: recipe.id }} className="block">
               <RecipeCoverImage
                 bucket={recipe.cover_storage_bucket}
                 path={recipe.cover_storage_path}
@@ -321,7 +330,10 @@ function RecipesList() {
               <h3 className="flex items-start gap-1.5 font-display text-lg font-semibold text-cocoa">
                 <span className="flex-1">{recipe.title}</span>
                 {recipe.favorited_at && (
-                  <Heart className="mt-1.5 h-4 w-4 shrink-0 fill-terracotta text-terracotta" aria-label="Favorite" />
+                  <Heart
+                    className="mt-1.5 h-4 w-4 shrink-0 fill-terracotta text-terracotta"
+                    aria-label="Favorite"
+                  />
                 )}
               </h3>
               {recipe.description && (
@@ -343,7 +355,9 @@ function RecipesList() {
                 )}
               </div>
               <div className="mt-3">
-                <span className={`rounded-full border px-2.5 py-1 text-xs ${readinessTone(readiness.label)}`}>
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-xs ${readinessTone(readiness.label)}`}
+                >
                   {readinessDisplay(readiness.label)}
                 </span>
                 <p className="mt-1.5 text-xs text-cocoa/60">{readiness.short}</p>

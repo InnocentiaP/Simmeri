@@ -26,6 +26,7 @@ import {
   type PlannerView,
 } from "@/lib/date-range";
 import { RecipePicker } from "@/components/app/RecipePicker";
+import { useIngredientMatcher } from "@/lib/ingredients/use-ingredient-matcher";
 import { MealPlanEntryForm } from "@/components/app/MealPlanEntryForm";
 import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
 import { PostCookKitchenDialog } from "@/components/app/PostCookKitchenDialog";
@@ -69,6 +70,7 @@ function PlannerPage() {
   const { view, date: dateParam } = Route.useSearch();
   const navigate = Route.useNavigate();
   const qc = useQueryClient();
+  const keyOf = useIngredientMatcher();
 
   const anchorDate = dateParam ? parseDateKey(dateParam) : new Date();
 
@@ -77,7 +79,9 @@ function PlannerPage() {
   const [confirmRemove, setConfirmRemove] = useState<MealPlanEntry | null>(null);
   const [cookingEntry, setCookingEntry] = useState<MealPlanEntry | null>(null);
   const [postCookRecipeId, setPostCookRecipeId] = useState<string | null>(null);
-  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(null);
+  const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(
+    null,
+  );
 
   const { start, end } =
     view === "week" ? getWeekRange(anchorDate, 1) : { start: anchorDate, end: anchorDate };
@@ -121,10 +125,10 @@ function PlannerPage() {
       const forRecipe = ingredients
         .filter((i) => i.recipe_id === recipeId)
         .map((i) => ({ display_name: i.display_name, importance: i.importance as Importance }));
-      map.set(recipeId, computeReadiness(forRecipe, kitchen));
+      map.set(recipeId, computeReadiness(forRecipe, kitchen, keyOf));
     }
     return map;
-  }, [ingredientsQuery.data, kitchenQuery.data, recipeIds]);
+  }, [ingredientsQuery.data, kitchenQuery.data, recipeIds, keyOf]);
 
   const entriesByDate = useMemo(() => {
     const map = new Map<string, MealPlanEntry[]>();
@@ -133,7 +137,9 @@ function PlannerPage() {
   }, [entries]);
 
   function goTo(nextDate: Date, nextView?: PlannerView) {
-    navigate({ search: (prev) => ({ ...prev, date: formatDateKey(nextDate), view: nextView ?? prev.view }) });
+    navigate({
+      search: (prev) => ({ ...prev, date: formatDateKey(nextDate), view: nextView ?? prev.view }),
+    });
   }
 
   function invalidateEntries() {
@@ -223,11 +229,15 @@ function PlannerPage() {
         };
       })
       .filter((s): s is NonNullable<typeof s> => s !== null);
-    setGeneratedCandidates(generateCandidates(sources, kitchenQuery.data ?? []));
+    setGeneratedCandidates(generateCandidates(sources, kitchenQuery.data ?? [], keyOf));
   }
 
-  const isLoading = entriesQuery.isLoading || (recipeIds.length > 0 && (recipesQuery.isLoading || ingredientsQuery.isLoading));
-  const hasError = Boolean(entriesQuery.error || recipesQuery.error || ingredientsQuery.error || kitchenQuery.error);
+  const isLoading =
+    entriesQuery.isLoading ||
+    (recipeIds.length > 0 && (recipesQuery.isLoading || ingredientsQuery.isLoading));
+  const hasError = Boolean(
+    entriesQuery.error || recipesQuery.error || ingredientsQuery.error || kitchenQuery.error,
+  );
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -237,7 +247,11 @@ function PlannerPage() {
           <p className="text-sm text-cocoa/70">
             {view === "week"
               ? `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
-              : anchorDate.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+              : anchorDate.toLocaleDateString(undefined, {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -287,7 +301,9 @@ function PlannerPage() {
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-cocoa hover:bg-cream-deep/40 disabled:opacity-60"
           >
             <ShoppingCart className="h-3.5 w-3.5" />
-            {view === "week" ? "Generate shopping preview for this week" : "Generate shopping preview for this day"}
+            {view === "week"
+              ? "Generate shopping preview for this week"
+              : "Generate shopping preview for this day"}
           </button>
         </div>
       </header>
@@ -326,7 +342,12 @@ function PlannerPage() {
             const p = picker;
             setPicker(null);
             if (p) {
-              setEntryForm({ mode: "create", recipe, defaultDate: p.dateKey, defaultMealType: p.mealType });
+              setEntryForm({
+                mode: "create",
+                recipe,
+                defaultDate: p.dateKey,
+                defaultMealType: p.mealType,
+              });
             }
           }}
           onClose={() => setPicker(null)}
@@ -367,7 +388,10 @@ function PlannerPage() {
       )}
 
       {postCookRecipeId && (
-        <PostCookKitchenDialog recipeId={postCookRecipeId} onClose={() => setPostCookRecipeId(null)} />
+        <PostCookKitchenDialog
+          recipeId={postCookRecipeId}
+          onClose={() => setPostCookRecipeId(null)}
+        />
       )}
 
       {generatedCandidates && (
@@ -385,7 +409,9 @@ function PlannerPage() {
         >
           <div className="w-full max-w-sm rounded-3xl bg-background p-6 shadow-[var(--shadow-paper)]">
             <h3 className="font-display text-lg font-semibold text-cocoa">Remove this entry?</h3>
-            <p className="mt-1 text-sm text-cocoa/70">This only removes it from your meal plan — the recipe itself is untouched.</p>
+            <p className="mt-1 text-sm text-cocoa/70">
+              This only removes it from your meal plan — the recipe itself is untouched.
+            </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
