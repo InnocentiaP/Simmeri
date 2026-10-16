@@ -1,5 +1,6 @@
 import {
   buildGeminiPrompt,
+  buildGeminiImagePrompt,
   SYSTEM_INSTRUCTION,
   GEMINI_RESPONSE_SCHEMA,
   buildGeminiEditPrompt,
@@ -15,6 +16,8 @@ const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 // Must be re-checked against the actual Vercel plan's serverless function
 // duration limit before relying on it in production (see plan section D/Q).
 const GEMINI_TIMEOUT_MS = 20_000;
+// Reading several screenshots takes noticeably longer than reading text.
+const GEMINI_IMAGE_TIMEOUT_MS = 45_000;
 const GEMINI_MAX_OUTPUT_TOKENS = 8192;
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -57,10 +60,13 @@ export type GeminiCallResult =
 // and every error category below are identical for both; only which
 // systemInstruction/prompt pair is sent differs, via the two thin wrappers
 // beneath this function.
+type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
+
 async function callGemini(
   systemInstruction: string,
-  userPrompt: string,
+  parts: GeminiPart[],
   logLabel: string,
+  timeoutMs: number = GEMINI_TIMEOUT_MS,
 ): Promise<GeminiCallResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -69,7 +75,7 @@ async function callGemini(
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   const startedAt = Date.now();
 
   try {
@@ -81,7 +87,7 @@ async function callGemini(
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { role: "system", parts: [{ text: systemInstruction }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          contents: [{ role: "user", parts }],
           generationConfig: {
             responseMimeType: "application/json",
             responseSchema: GEMINI_RESPONSE_SCHEMA,
@@ -114,7 +120,7 @@ async function callGemini(
   } catch (err) {
     clearTimeout(timer);
     if (controller.signal.aborted) {
-      devLog(logLabel, "timeout after", GEMINI_TIMEOUT_MS, "ms");
+      devLog(logLabel, "timeout after", timeoutMs, "ms");
       return { ok: false, category: "timeout" };
     }
     devLog(logLabel, "network error", err instanceof Error ? err.message : String(err));
@@ -126,8 +132,10 @@ async function callGemini(
 // unchanged from before this function was factored out of a single
 // monolithic implementation — same model, endpoint, timeout, prompt, and
 // error mapping.
-export async function callGeminiForRecipeExtraction(cleanedText: string): Promise<GeminiCallResult> {
-  return callGemini(SYSTEM_INSTRUCTION, buildGeminiPrompt(cleanedText), "extraction");
+export async function callGeminiForRecipeExtraction(
+  cleanedText: string,
+): Promise<GeminiCallResult> {
+  return callGemini(SYSTEM_INSTRUCTION, [{ text: buildGeminiPrompt(cleanedText) }], "extraction");
 }
 
 // Used by the Edit Recipe "Clean up with AI" flow. recipeJson is the
@@ -137,5 +145,22 @@ export async function callGeminiForRecipeExtraction(cleanedText: string): Promis
 // separation between prompt-building (./gemini-prompt.ts) and the network
 // call.
 export async function callGeminiForRecipeCleanup(recipeJson: string): Promise<GeminiCallResult> {
-  return callGemini(EDIT_SYSTEM_INSTRUCTION, buildGeminiEditPrompt(recipeJson), "cleanup");
+  return callGemini(
+    EDIT_SYSTEM_INSTRUCTION,
+    [{ text: buildGeminiEditPrompt(recipeJson) }],
+    "cleanup",
+  );
+}
+
+// Used by screenshot/photo import. Same system instruction and response
+// schema as text extraction; the images are untrusted content just like
+// page text, and the instruction text sits in its own part after them.
+export async function callGeminiForImageRecipeExtraction(
+  images: readonly { mimeType: string; base64: string }[],
+): Promise<GeminiCallResult> {
+  const parts: GeminiPart[] = [
+    ...images.map((image) => ({ inline_data: { mime_type: image.mimeType, data: image.base64 } })),
+    { text: buildGeminiImagePrompt(images.length) },
+  ];
+  return callGemini(SYSTEM_INSTRUCTION, parts, "image-extraction", GEMINI_IMAGE_TIMEOUT_MS);
 }

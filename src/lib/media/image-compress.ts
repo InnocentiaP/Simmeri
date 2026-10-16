@@ -55,21 +55,32 @@ export interface PreparedImage {
 // enforced first and always apply — the fallback never bypasses them.
 // Never produces or stores base64 image data; the result is always a Blob
 // destined for Storage, not Postgres.
-export async function prepareImageForUpload(file: File): Promise<PreparedImage> {
+export interface PrepareImageOptions {
+  maxLongestEdge?: number;
+  quality?: number;
+}
+
+export async function prepareImageForUpload(
+  file: File,
+  { maxLongestEdge = MAX_LONGEST_EDGE, quality = 0.82 }: PrepareImageOptions = {},
+): Promise<PreparedImage> {
   if (!isAcceptedMimeType(file.type)) {
     throw new ImagePrepError("unsupported_type", "Please choose a JPEG, PNG, or WebP image.");
   }
   if (!isWithinRawSizeLimit(file.size)) {
-    throw new ImagePrepError("too_large", "That image is larger than 8 MB. Please choose a smaller file.");
+    throw new ImagePrepError(
+      "too_large",
+      "That image is larger than 8 MB. Please choose a smaller file.",
+    );
   }
 
   try {
     const bitmap = await createImageBitmap(file);
     try {
-      const { width, height } = computeResizedDimensions({
-        width: bitmap.width,
-        height: bitmap.height,
-      });
+      const { width, height } = computeResizedDimensions(
+        { width: bitmap.width, height: bitmap.height },
+        maxLongestEdge,
+      );
 
       const canvas = document.createElement("canvas");
       canvas.width = width;
@@ -79,7 +90,7 @@ export async function prepareImageForUpload(file: File): Promise<PreparedImage> 
       ctx.drawImage(bitmap, 0, 0, width, height);
 
       const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.82),
+        canvas.toBlob((b) => resolve(b), "image/jpeg", quality),
       );
       if (!blob) throw new Error("Canvas encoding failed");
 

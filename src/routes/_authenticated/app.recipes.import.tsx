@@ -1,8 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, Link as LinkIcon, FileText, Sparkles, Database } from "lucide-react";
+import {
+  ChevronLeft,
+  Link as LinkIcon,
+  FileText,
+  Sparkles,
+  Database,
+  Image as ImageIcon,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { attachImportedCover } from "@/lib/media/import-cover";
 import { saveImportedRecipe, type RecipeFormValues } from "@/lib/api";
@@ -14,6 +21,10 @@ import {
 import { extractDraftFromPlainText } from "@/lib/import/plaintext-extract";
 import { extractRecipeFromUrl } from "@/lib/import/recipe-import.functions";
 import { improveRecipeDraftWithAI } from "@/lib/import/recipe-ai-import.functions";
+import { extractRecipeFromImages } from "@/lib/import/recipe-image-import.functions";
+import { fileToAiImagePayload } from "@/lib/import/image-to-payload";
+import { MAX_AI_IMAGES, type AiImagePayload } from "@/lib/import/image-payload";
+import { ImageImportPicker, type PickedImage } from "@/components/app/ImageImportPicker";
 import type { ImportResult } from "@/lib/import/types";
 
 const MAX_PASTE_CHARS = 20_000;
@@ -23,7 +34,9 @@ export const Route = createFileRoute("/_authenticated/app/recipes/import")({
   component: ImportRecipe,
 });
 
-type SourceMode = "paste" | "url";
+type SourceMode = "paste" | "url" | "images";
+
+type PreparedImage = PickedImage & { payload: AiImagePayload };
 type Step =
   | { kind: "input" }
   | { kind: "extracting" }
@@ -35,6 +48,63 @@ function ImportRecipe() {
   const [pasteText, setPasteText] = useState("");
   const [url, setUrl] = useState("");
   const [step, setStep] = useState<Step>({ kind: "input" });
+  const [images, setImages] = useState<PreparedImage[]>([]);
+  const [preparingImages, setPreparingImages] = useState(false);
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+
+  // Release preview object URLs when leaving the page.
+  useEffect(
+    () => () => imagesRef.current.forEach((img) => URL.revokeObjectURL(img.previewUrl)),
+    [],
+  );
+
+  const addImageFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+    const room = MAX_AI_IMAGES - imagesRef.current.length;
+    if (room <= 0) {
+      toast.warning(`You can add up to ${MAX_AI_IMAGES} images.`);
+      return;
+    }
+    if (files.length > room) toast.warning(`Only the first ${room} image(s) were added.`);
+    setPreparingImages(true);
+    const prepared: PreparedImage[] = [];
+    for (const file of files.slice(0, room)) {
+      try {
+        const payload = await fileToAiImagePayload(file);
+        prepared.push({
+          id: crypto.randomUUID(),
+          name: file.name || "Pasted image",
+          previewUrl: URL.createObjectURL(file),
+          payload,
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "That image couldn't be used.");
+      }
+    }
+    setImages((prev) => [...prev, ...prepared].slice(0, MAX_AI_IMAGES));
+    setPreparingImages(false);
+  }, []);
+
+  function removeImage(id: string) {
+    setImages((prev) => {
+      const gone = prev.find((img) => img.id === id);
+      if (gone) URL.revokeObjectURL(gone.previewUrl);
+      return prev.filter((img) => img.id !== id);
+    });
+  }
+
+  const imagesMutation = useMutation({
+    mutationFn: (payloads: AiImagePayload[]) =>
+      extractRecipeFromImages({ data: { images: payloads } }),
+    onSuccess: (result) => setStep({ kind: "review", result }),
+    onError: (e: Error) =>
+      setStep({
+        kind: "error",
+        message:
+          e.message || "Meri couldn't read those images. Try again or paste the text instead.",
+      }),
+  });
 
   const urlMutation = useMutation({
     mutationFn: (u: string) => extractRecipeFromUrl({ data: { url: u } }),
@@ -53,6 +123,9 @@ function ImportRecipe() {
         kind: "review",
         result: { draft, warnings, source: { url: null, title: null }, method: "text" },
       });
+    } else if (mode === "images") {
+      setStep({ kind: "extracting" });
+      imagesMutation.mutate(images.map((img) => img.payload));
     } else {
       setStep({ kind: "extracting" });
       urlMutation.mutate(url);
@@ -64,13 +137,19 @@ function ImportRecipe() {
       <ReviewStep
         result={step.result}
         pasteText={mode === "paste" ? pasteText : null}
+        images={mode === "images" ? images.map((img) => img.payload) : null}
         onBack={() => setStep({ kind: "input" })}
       />
     );
   }
 
   const extractDisabled =
-    step.kind === "extracting" || (mode === "paste" ? !pasteText.trim() : !url.trim());
+    step.kind === "extracting" ||
+    (mode === "paste"
+      ? !pasteText.trim()
+      : mode === "images"
+        ? images.length === 0 || preparingImages
+        : !url.trim());
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -84,7 +163,9 @@ function ImportRecipe() {
       <p className="mb-6 text-sm text-cocoa/70">
         {mode === "url"
           ? "Import from a public recipe webpage — paste the link below. You'll review and edit everything before it's saved."
-          : "Paste the recipe's text below. You'll review and edit everything before it's saved."}
+          : mode === "images"
+            ? "Add screenshots of a recipe — an Instagram or TikTok caption, a cookbook page, or a handwritten card. Meri reads the text and you review everything before it's saved."
+            : "Paste the recipe's text below. You'll review and edit everything before it's saved."}
       </p>
 
       <div className="mb-4 inline-flex rounded-full border border-border bg-background p-1">
@@ -106,9 +187,25 @@ function ImportRecipe() {
         >
           <LinkIcon className="h-3.5 w-3.5" /> From a URL
         </button>
+        <button
+          type="button"
+          onClick={() => setMode("images")}
+          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm ${
+            mode === "images" ? "bg-olive-deep text-primary-foreground" : "text-cocoa"
+          }`}
+        >
+          <ImageIcon className="h-3.5 w-3.5" /> Photo / screenshot
+        </button>
       </div>
 
-      {mode === "paste" ? (
+      {mode === "images" ? (
+        <ImageImportPicker
+          images={images}
+          busy={preparingImages}
+          onAddFiles={addImageFiles}
+          onRemove={removeImage}
+        />
+      ) : mode === "paste" ? (
         <div>
           <textarea
             value={pasteText}
@@ -136,8 +233,8 @@ function ImportRecipe() {
             className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
           />
           <p className="mt-1.5 text-xs text-cocoa/60">
-            Works with most recipe blogs and websites. Social-media and video links aren't supported
-            yet — paste the caption or recipe text instead.
+            Works with most recipe blogs and websites. For Instagram, TikTok, or Facebook posts,
+            screenshot the caption and use “Photo / screenshot”.
           </p>
         </div>
       )}
@@ -152,7 +249,9 @@ function ImportRecipe() {
           className="rounded-full bg-olive-deep px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-olive disabled:opacity-60"
         >
           {step.kind === "extracting"
-            ? "Reading that page… (a few seconds if Meri needs AI)"
+            ? mode === "images"
+              ? "Meri is reading your images…"
+              : "Reading that page… (a few seconds if Meri needs AI)"
             : "Extract recipe"}
         </button>
       </div>
@@ -163,10 +262,12 @@ function ImportRecipe() {
 function ReviewStep({
   result,
   pasteText,
+  images,
   onBack,
 }: {
   result: ImportResult;
   pasteText: string | null;
+  images: AiImagePayload[] | null;
   onBack: () => void;
 }) {
   const form = useRecipeForm(result.draft);
@@ -174,8 +275,8 @@ function ReviewStep({
   const qc = useQueryClient();
   const { user } = useAuth();
 
-  // The automatic URL import may already have used AI.
-  const [aiApplied, setAiApplied] = useState(result.method === "ai");
+  // The automatic URL import and image import have already used AI.
+  const [aiApplied, setAiApplied] = useState(result.method === "ai" || result.method === "images");
   const [useSourcePhoto, setUseSourcePhoto] = useState(Boolean(result.imageUrl));
   const [photoFailedToLoad, setPhotoFailedToLoad] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
@@ -215,6 +316,11 @@ function ReviewStep({
   // content" ever crosses the wire — see the AI integration plan, section B.
   const aiMut = useMutation({
     mutationFn: async () => {
+      // Image imports retry by re-reading the same images.
+      if (images && images.length > 0) {
+        const r = await extractRecipeFromImages({ data: { images } });
+        return { draft: r.draft, warnings: r.warnings };
+      }
       const source = result.source.url
         ? { kind: "url" as const, url: result.source.url }
         : { kind: "text" as const, text: pasteText ?? "" };
@@ -379,11 +485,13 @@ function ReviewStep({
 
 function MethodBadge({ method }: { method: NonNullable<ImportResult["method"]> }) {
   const content =
-    method === "ai"
-      ? { icon: Sparkles, label: "Read by Meri with AI — double-check before saving" }
-      : method === "partial"
-        ? { icon: Database, label: "Only part of the recipe could be read" }
-        : { icon: Database, label: "Read from the page's recipe data" };
+    method === "images"
+      ? { icon: Sparkles, label: "Read by Meri from your images — double-check before saving" }
+      : method === "ai"
+        ? { icon: Sparkles, label: "Read by Meri with AI — double-check before saving" }
+        : method === "partial"
+          ? { icon: Database, label: "Only part of the recipe could be read" }
+          : { icon: Database, label: "Read from the page's recipe data" };
   const Icon = content.icon;
   return (
     <p className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-olive-deep/10 px-3 py-1 text-xs font-medium text-olive-deep">

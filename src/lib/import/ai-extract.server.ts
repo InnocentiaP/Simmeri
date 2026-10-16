@@ -1,4 +1,9 @@
-import { callGeminiForRecipeExtraction } from "./gemini-client.server";
+import {
+  callGeminiForImageRecipeExtraction,
+  callGeminiForRecipeExtraction,
+  type GeminiCallResult,
+} from "./gemini-client.server";
+import type { AiImagePayload } from "./image-payload";
 import { parseAiRecipeDraft } from "./ai-draft-schema";
 import { normalizeAiDraftToFormValues, type NormalizedRecipeDraft } from "./ai-normalize";
 import { isAiRateLimited } from "./ai-rate-limit.server";
@@ -20,11 +25,27 @@ export async function runAiRecipeExtraction(
   userId: string,
   text: string,
 ): Promise<AiExtractionOutcome> {
+  return runWithLimits(userId, () => callGeminiForRecipeExtraction(text));
+}
+
+// Same pipeline for screenshots/photos; callers validate the images first
+// (see checkAiImagePayloads).
+export async function runAiImageRecipeExtraction(
+  userId: string,
+  images: readonly AiImagePayload[],
+): Promise<AiExtractionOutcome> {
+  return runWithLimits(userId, () => callGeminiForImageRecipeExtraction(images));
+}
+
+async function runWithLimits(
+  userId: string,
+  call: () => Promise<GeminiCallResult>,
+): Promise<AiExtractionOutcome> {
   if (isAiRateLimited(userId)) {
     return { ok: false, message: AI_RATE_LIMIT_EXCEEDED_MESSAGE, notConfigured: false };
   }
 
-  const result = await callGeminiForRecipeExtraction(text);
+  const result = await call();
   if (!result.ok) {
     return {
       ok: false,

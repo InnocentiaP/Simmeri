@@ -15,7 +15,8 @@ The active roadmap closes the gap between what the landing page promises and wha
 | 4 | Trust: data export, onboarding (kitchen staples), timezone actually applied | Not started |
 | 5 | Landing copy alignment (copy only, no redesign) for promises deferred below; also update `TonightsDeck.tsx` copy ("Three ideas", "short deck instead of an endless feed") to match the endless deck | Not started |
 | 6a | Import from anywhere — blogs: one-step URL import (JSON-LD → microdata → automatic AI fallback on the page's recipe section), cleaner text, recipe photo as cover, clearer errors for sites that block apps | **In review** (branch `feat/import-anywhere-6a`) |
-| 6b–6d | Screenshot/photo import, video upload + YouTube links (Gemini video), social-media captions | Not started |
+| 6b | Screenshot/photo import (Gemini vision): up to 5 images via picker, drag-and-drop, or clipboard paste | **In review** (branch `feat/import-anywhere-6b`) |
+| 6c–6d | Video upload + YouTube links (Gemini video), social-media captions | Not started |
 
 Deferred (not in this roadmap): screenshot import, offline/PWA, household sharing, drag-and-drop planner, Free/Premium entitlements and billing.
 
@@ -54,6 +55,14 @@ Notes:
 - Recipe photo offered as the cover; downloaded via the SSRF-safe fetcher (`fetchRemoteImage`, ≤ 5 MB, JPEG/PNG/WebP) and uploaded through the normal resize/EXIF-strip cover pipeline.
 - Fetcher: page cap raised from 2 MB to 5 MB, honest "compatible" User-Agent, friendly message when a site blocks apps (401/402/403/429/451).
 - Known limit: sites with bot protection (e.g. Allrecipes) can't be read; users paste text instead.
+
+## Phase 6b — screenshot / photo import
+
+- New "Photo / screenshot" tab on Import: up to 5 images (Instagram/TikTok caption screenshots, cookbook pages, handwritten cards) via file picker, drag-and-drop, or Ctrl/Cmd+V.
+- Browser resizes each image to 1600px JPEG (also strips EXIF) before upload; server re-validates count, base64, per-image (1.5 MB) and total (3 MB) size, and real file type from magic bytes (`src/lib/import/image-payload.ts`, tested).
+- `extractRecipeFromImages` sends the images to Gemini with the existing extraction rules plus an image-specific prompt (read only visible text, ignore app UI, never guess unreadable values); same per-user AI rate limit. Images are never stored.
+- Review screen labels the draft "Read by Meri from your images"; "Try AI again" re-reads the same images.
+- Verified against the live API: an image costs roughly 1,100 input tokens.
 
 ## Working rules
 
