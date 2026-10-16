@@ -10,7 +10,17 @@ import {
   type PanInfo,
 } from "motion/react";
 import { toast } from "sonner";
-import { BookOpen, CalendarPlus, Flame, Heart, RotateCcw, Sparkles, Undo2, X } from "lucide-react";
+import {
+  BookOpen,
+  CalendarPlus,
+  Flame,
+  Heart,
+  RotateCcw,
+  Shuffle,
+  Sparkles,
+  Undo2,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createMealPlanEntry, type Recipe } from "@/lib/api";
 import { formatDateKey } from "@/lib/date-range";
@@ -59,6 +69,20 @@ function loadDeck(): DeckState {
   }
 }
 
+// How many times the user pressed Shuffle today (part of the shuffle seed).
+function shuffleKey(): string {
+  return `simmeri:tonight-shuffle:${formatDateKey(new Date())}`;
+}
+
+function loadShuffleCount(): number {
+  try {
+    const n = Number(window.sessionStorage.getItem(shuffleKey()));
+    return Number.isInteger(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
 function TonightPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -72,6 +96,15 @@ function TonightPage() {
   const [announcement, setAnnouncement] = useState("");
   const [planRecipe, setPlanRecipe] = useState<Recipe | null>(null);
   const [cookingId, setCookingId] = useState<string | null>(null);
+  const [shuffleCount, setShuffleCount] = useState(loadShuffleCount);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(shuffleKey(), String(shuffleCount));
+    } catch {
+      // Not critical: the shuffle just resets to today's default order.
+    }
+  }, [shuffleCount]);
 
   useEffect(() => {
     try {
@@ -92,6 +125,9 @@ function TonightPage() {
   // Endless within the user's own collection: every recipe is in the deck,
   // ranked so what's cookable now comes first, then recipes that need a
   // shop (fine when planning a later day), then ones missing a core item.
+  // Within each group the order is shuffled per day (and per Shuffle press),
+  // so the same recipes don't always lead and others aren't always last.
+  const seed = `${formatDateKey(now)}:${shuffleCount}`;
   const ranked = useMemo(
     () =>
       data
@@ -100,9 +136,10 @@ function TonightPage() {
             now,
             includeNeedsShopping: true,
             includeNotReady: true,
+            seed,
           })
         : [],
-    [data, mood, now],
+    [data, mood, now, seed],
   );
   const rankedIds = useMemo(() => ranked.map((r) => r.recipeId), [ranked]);
   const reasonsById = useMemo(() => new Map(ranked.map((r) => [r.recipeId, r.reasons])), [ranked]);
@@ -211,6 +248,13 @@ function TonightPage() {
     setAnnouncement("Deck restarted.");
   }
 
+  // Reorders the cards you haven't decided on yet; skips, shortlist, and
+  // planned picks are kept.
+  function shuffleDeck() {
+    setShuffleCount((n) => n + 1);
+    setAnnouncement("Deck shuffled.");
+  }
+
   function revisitSkipped() {
     dispatch({ type: "clearSkips" });
     setAnnouncement("Skipped recipes are back in the deck.");
@@ -299,14 +343,24 @@ function TonightPage() {
             <span>
               {remaining.length} {remaining.length === 1 ? "idea" : "ideas"} left
             </span>
-            <button
-              type="button"
-              onClick={undo}
-              disabled={deck.history.length === 0}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-cream-deep/40 disabled:opacity-40"
-            >
-              <Undo2 className="h-3.5 w-3.5" /> Undo
-            </button>
+            <span className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={shuffleDeck}
+                disabled={remaining.length < 2}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-cream-deep/40 disabled:opacity-40"
+              >
+                <Shuffle className="h-3.5 w-3.5" /> Shuffle
+              </button>
+              <button
+                type="button"
+                onClick={undo}
+                disabled={deck.history.length === 0}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-cream-deep/40 disabled:opacity-40"
+              >
+                <Undo2 className="h-3.5 w-3.5" /> Undo
+              </button>
+            </span>
           </div>
 
           <div className="relative">

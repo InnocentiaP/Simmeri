@@ -5,6 +5,8 @@ import {
   matchesMood,
   recommend,
   scoreRecipe,
+  seededUnit,
+  SHUFFLE_SPREAD,
   summarizeCookingHistory,
   WEIGHTS,
   type RecommendationInput,
@@ -270,5 +272,65 @@ describe("summarizeCookingHistory", () => {
       { recipe_id: "r1", cooked_at: daysAgo(1), rating: "amazing" },
     ]);
     assert.equal(summary.get("r1")?.lastRating, null);
+  });
+});
+
+describe("seeded daily shuffle", () => {
+  const many = Array.from({ length: 12 }, (_, i) =>
+    input({ recipeId: `r${String(i).padStart(2, "0")}` }),
+  );
+  const order = (seed?: string) =>
+    recommend(many, { mood: "any", now: NOW, seed }).map((r) => r.recipeId);
+
+  it("is repeatable for the same seed", () => {
+    assert.deepEqual(order("2026-10-16"), order("2026-10-16"));
+  });
+
+  it("changes the order from one day to the next", () => {
+    assert.notDeepEqual(order("2026-10-16"), order("2026-10-17"));
+    assert.notDeepEqual(order("2026-10-16"), order());
+  });
+
+  it("gives every recipe a turn near the top over a month of seeds", () => {
+    const leaders = new Set<string>();
+    for (let day = 1; day <= 30; day++) leaders.add(order(`2026-11-${day}`).slice(0, 3)[0]);
+    assert.ok(leaders.size >= 6, `only ${leaders.size} different recipes led the deck`);
+  });
+
+  it("never lets shuffling move a recipe across readiness tiers", () => {
+    const mixed = [
+      input({ recipeId: "a-core-missing", readiness: "not_ready", missing: ["x"] }),
+      input({ recipeId: "b-shop", readiness: "needs_shopping", missing: ["y"] }),
+      input({ recipeId: "c-ready", readiness: "ready_to_cook" }),
+      input({ recipeId: "d-check", readiness: "check_first", needsCheck: ["z"] }),
+    ];
+    for (let day = 1; day <= 20; day++) {
+      const ids = recommend(mixed, {
+        mood: "any",
+        now: NOW,
+        seed: `day-${day}`,
+        includeNeedsShopping: true,
+        includeNotReady: true,
+      }).map((r) => r.recipeId);
+      assert.deepEqual(ids.slice(2), ["b-shop", "a-core-missing"]);
+    }
+  });
+
+  it("still sinks a recipe cooked yesterday below an otherwise equal one", () => {
+    const pair = [
+      input({ recipeId: "fresh", lastCookedAt: daysAgo(1) }),
+      input({ recipeId: "old" }),
+    ];
+    assert.ok(SHUFFLE_SPREAD < -WEIGHTS.cookedWithin3Days);
+    for (let day = 1; day <= 200; day++) {
+      assert.equal(recommend(pair, { mood: "any", now: NOW, seed: `d${day}` })[0].recipeId, "old");
+    }
+  });
+
+  it("maps the hash into [0, 1)", () => {
+    for (const key of ["a", "b", "recipe-123", ""]) {
+      const u = seededUnit("seed", key);
+      assert.ok(u >= 0 && u < 1);
+    }
   });
 });

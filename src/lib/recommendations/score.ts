@@ -190,10 +190,43 @@ export interface RecommendOptions {
   // When true (the default), a non-"any" mood filters to matching recipes;
   // when false it only boosts them.
   strictMood?: boolean;
+  // Optional shuffle seed (e.g. today's date). Adds a repeatable random
+  // nudge of up to SHUFFLE_SPREAD points per recipe, so the order changes
+  // from day to day instead of always surfacing the same recipes first.
+  // Same seed, same order; no seed, no shuffle.
+  seed?: string;
 }
 
-// Ranks eligible recipes, highest score first. Ties break on recipeId so
-// the order is stable across renders.
+// Big enough to reorder recipes within a readiness tier (e.g. let a
+// non-favorite beat a favorite some days). Deliberately smaller than the
+// "cooked in the last 3 days" penalty, so a recipe cooked yesterday always
+// sinks below an otherwise equal one.
+export const SHUFFLE_SPREAD = 35;
+
+// Readiness tiers are never mixed by shuffling: what can be cooked now
+// always comes before what needs a shop, which comes before what is missing
+// a core ingredient.
+function readinessTier(label: RecommendationInput["readiness"]): number {
+  if (label === "needs_shopping") return 1;
+  if (label === "not_ready") return 2;
+  return 0;
+}
+
+// FNV-1a: a tiny, stable string hash mapped to [0, 1). Not for security —
+// only to make a repeatable per-day, per-recipe shuffle.
+export function seededUnit(seed: string, key: string): number {
+  let hash = 0x811c9dc5;
+  const text = `${seed}:${key}`;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) / 0x100000000;
+}
+
+// Ranks eligible recipes: by readiness tier, then by score (plus the seeded
+// shuffle nudge, when a seed is given). Ties break on recipeId so the order
+// is stable across renders.
 export function recommend(
   inputs: readonly RecommendationInput[],
   {
@@ -202,16 +235,28 @@ export function recommend(
     includeNeedsShopping = false,
     includeNotReady = false,
     strictMood = true,
+    seed,
   }: RecommendOptions,
 ): Recommendation[] {
   return inputs
     .filter((input) => isEligible(input, includeNeedsShopping, includeNotReady))
     .filter((input) => !strictMood || mood === "any" || matchesMood(input, mood, now))
-    .map((input) => ({ recipeId: input.recipeId, ...scoreRecipe(input, mood, now) }))
+    .map((input) => {
+      const scored = scoreRecipe(input, mood, now);
+      const nudge = seed ? seededUnit(seed, input.recipeId) * SHUFFLE_SPREAD : 0;
+      return {
+        rec: { recipeId: input.recipeId, ...scored } as Recommendation,
+        tier: readinessTier(input.readiness),
+        sortKey: scored.score + nudge,
+      };
+    })
     .sort(
       (a, b) =>
-        b.score - a.score || (a.recipeId < b.recipeId ? -1 : a.recipeId > b.recipeId ? 1 : 0),
-    );
+        a.tier - b.tier ||
+        b.sortKey - a.sortKey ||
+        (a.rec.recipeId < b.rec.recipeId ? -1 : a.rec.recipeId > b.rec.recipeId ? 1 : 0),
+    )
+    .map((x) => x.rec);
 }
 
 export interface CookingHistoryRowInput {

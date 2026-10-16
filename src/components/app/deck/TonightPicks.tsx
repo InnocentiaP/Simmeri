@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { readinessDisplay, readinessTone } from "@/lib/readiness";
 import { recommend } from "@/lib/recommendations/score";
+import { formatDateKey } from "@/lib/date-range";
 import { useRecommendationData } from "@/lib/recommendations/use-recommendation-data";
 import { RecipeCoverImage } from "@/components/app/RecipeCoverImage";
 
@@ -13,10 +14,15 @@ const PICKS = 3;
 export function TonightPicks() {
   const { data, isLoading, error } = useRecommendationData();
 
-  const picks = useMemo(
-    () => (data ? recommend(data.inputs, { mood: "any", now: new Date() }).slice(0, PICKS) : []),
-    [data],
-  );
+  const picks = useMemo(() => {
+    if (!data) return [];
+    const now = new Date();
+    // Same daily shuffle as the deck's default order, so picks vary by day.
+    return recommend(data.inputs, { mood: "any", now, seed: `${formatDateKey(now)}:0` }).slice(
+      0,
+      PICKS,
+    );
+  }, [data]);
 
   // The dashboard already handles "no recipes" and load errors on its own.
   if (isLoading || error || !data || data.inputs.length === 0) return null;
