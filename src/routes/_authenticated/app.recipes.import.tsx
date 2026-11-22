@@ -71,6 +71,8 @@ function ImportRecipe() {
   const [preparingImages, setPreparingImages] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  // Optional description/caption combined with the video for exact amounts.
+  const [videoWrittenText, setVideoWrittenText] = useState("");
   const [videoPhase, setVideoPhase] = useState<VideoImportPhase | null>(null);
   const imagesRef = useRef(images);
   imagesRef.current = images;
@@ -174,8 +176,8 @@ function ImportRecipe() {
 
   const videoMutation = useMutation({
     mutationFn: async (source: { file: File; creditUrl: string | null } | { url: string }) => {
-      if (!("file" in source)) return importRecipeFromYouTube(source.url);
-      const result = await importRecipeFromVideoFile(source.file, setVideoPhase);
+      if (!("file" in source)) return importRecipeFromYouTube(source.url, videoWrittenText);
+      const result = await importRecipeFromVideoFile(source.file, setVideoPhase, videoWrittenText);
       // Credit the original post (e.g. the TikTok link) as the recipe source.
       return source.creditUrl
         ? { ...result, source: { url: source.creditUrl, title: null } }
@@ -265,6 +267,7 @@ function ImportRecipe() {
         result={step.result}
         pasteText={mode === "paste" ? pasteText : null}
         images={mode === "images" ? images.map((img) => img.payload) : null}
+        videoWrittenText={videoWrittenText}
         onBack={() => setStep({ kind: "input" })}
       />
     );
@@ -369,6 +372,24 @@ function ImportRecipe() {
               }}
             />
           </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-cocoa">
+              Description or caption <span className="font-normal text-cocoa/60">(optional)</span>
+            </span>
+            <textarea
+              value={videoWrittenText}
+              onChange={(e) => setVideoWrittenText(e.target.value)}
+              rows={4}
+              disabled={step.kind === "extracting"}
+              placeholder="Paste the video's description or caption if it lists ingredients or amounts…"
+              className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
+            />
+            <span className="text-xs text-cocoa/60">
+              Meri combines it with the video: amounts written here are used first, and the video
+              fills in the rest. For YouTube links the description is read automatically when
+              available.
+            </span>
+          </label>
           {videoPhase?.kind === "uploading" && (
             <div
               role="progressbar"
@@ -461,11 +482,13 @@ function ReviewStep({
   result,
   pasteText,
   images,
+  videoWrittenText,
   onBack,
 }: {
   result: ImportResult;
   pasteText: string | null;
   images: AiImagePayload[] | null;
+  videoWrittenText: string;
   onBack: () => void;
 }) {
   const form = useRecipeForm(result.draft);
@@ -525,7 +548,7 @@ function ReviewStep({
   const aiMut = useMutation({
     mutationFn: async () => {
       if (youTubeSource) {
-        const r = await importRecipeFromYouTube(youTubeSource);
+        const r = await importRecipeFromYouTube(youTubeSource, videoWrittenText);
         return { draft: r.draft, warnings: r.warnings };
       }
       if (result.method === "social" && result.source.url) {

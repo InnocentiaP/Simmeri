@@ -43,7 +43,7 @@ export async function runAiImageRecipeExtraction(
 // that follows passes alreadyCounted to avoid charging the user twice.
 export async function runAiVideoRecipeExtraction(
   userId: string,
-  video: { fileUri: string; mimeType?: string },
+  video: { fileUri: string; mimeType?: string; writtenText?: string | null },
   { alreadyCounted = false }: { alreadyCounted?: boolean } = {},
 ): Promise<AiExtractionOutcome> {
   return runWithLimits(userId, () => callGeminiForVideoRecipeExtraction(video), alreadyCounted);

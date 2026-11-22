@@ -15,8 +15,10 @@ import {
   isGeminiFileName,
   isVideoOwnedBy,
   parseYouTubeUrl,
+  prepareWrittenRecipeText,
   VIDEO_MIME_TYPES,
 } from "./video-source";
+import { fetchYouTubeDescription } from "./youtube-description.server";
 import type { ImportResult } from "./types";
 
 // How long one call waits for Gemini to finish processing an upload before
@@ -29,6 +31,21 @@ const NOT_FOUND_MESSAGE = "We couldn't find that video upload. Please try upload
 
 const VIDEO_WARNING =
   "Meri watched this video. Amounts that weren't said or shown are left blank — please fill them in.";
+
+function videoWarnings(writtenText: string | null, wasPasted: boolean): string[] {
+  if (writtenText) {
+    return [
+      wasPasted
+        ? "Meri combined the video with the caption you pasted — amounts come from the text where it had them."
+        : "Meri combined the video with its YouTube description — amounts come from the description where it had them.",
+      "Anything neither source stated is left blank — please fill it in.",
+    ];
+  }
+  return [
+    VIDEO_WARNING,
+    "Tip: if the video's description or caption lists the recipe, paste it in the Video tab and import again for exact amounts.",
+  ];
+}
 
 function userIdOf(context: unknown): string {
   return (context as { userId: string }).userId;
@@ -83,26 +100,40 @@ export const extractRecipeFromVideo = createServerFn({ method: "POST" })
   .middleware([importAuthMiddleware])
   .validator(
     z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("youtube"), url: z.string().trim().url() }),
-      z.object({ kind: z.literal("upload"), fileName: z.string().trim() }),
+      z.object({
+        kind: z.literal("youtube"),
+        url: z.string().trim().url(),
+        writtenText: z.string().max(20_000).optional(),
+      }),
+      z.object({
+        kind: z.literal("upload"),
+        fileName: z.string().trim(),
+        writtenText: z.string().max(20_000).optional(),
+      }),
     ]),
   )
   .handler(async ({ data, context }): Promise<VideoImportResponse> => {
     const userId = userIdOf(context);
 
+    // Text the user pasted (a caption or description) always wins; for
+    // YouTube, the description is fetched automatically when it isn't.
+    const pasted = prepareWrittenRecipeText(data.writtenText);
+
     if (data.kind === "youtube") {
       const watchUrl = parseYouTubeUrl(data.url);
       if (!watchUrl) throw new Error("That doesn't look like a public YouTube video link.");
-      const ai = await runAiVideoRecipeExtraction(userId, { fileUri: watchUrl });
+      const videoId = new URL(watchUrl).searchParams.get("v");
+      const writtenText =
+        pasted ?? prepareWrittenRecipeText(videoId ? await fetchYouTubeDescription(videoId) : null);
+      const ai = await runAiVideoRecipeExtraction(userId, { fileUri: watchUrl, writtenText });
       if (!ai.ok) {
         throw new Error(`${ai.message} Private and unlisted YouTube videos can't be read.`);
       }
-      const videoId = new URL(watchUrl).searchParams.get("v");
       return {
         status: "done",
         result: {
           draft: { ...ai.draft, title: ai.draft.title || "YouTube recipe" },
-          warnings: [VIDEO_WARNING],
+          warnings: videoWarnings(writtenText, pasted !== null),
           source: { url: watchUrl, title: ai.draft.title || null },
           method: "video",
           imageUrl: videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null,
@@ -137,7 +168,7 @@ export const extractRecipeFromVideo = createServerFn({ method: "POST" })
       }
       const ai = await runAiVideoRecipeExtraction(
         userId,
-        { fileUri: lookup.file.uri, mimeType: lookup.file.mimeType },
+        { fileUri: lookup.file.uri, mimeType: lookup.file.mimeType, writtenText: pasted },
         { alreadyCounted: true },
       );
       if (!ai.ok) throw new Error(ai.message);
@@ -145,7 +176,7 @@ export const extractRecipeFromVideo = createServerFn({ method: "POST" })
         status: "done",
         result: {
           draft: { ...ai.draft, title: ai.draft.title || "Video recipe" },
-          warnings: [VIDEO_WARNING],
+          warnings: videoWarnings(pasted, true),
           source: { url: null, title: null },
           method: "video",
         },

@@ -181,6 +181,8 @@ export async function callGeminiForImageRecipeExtraction(
 export async function callGeminiForVideoRecipeExtraction(video: {
   fileUri: string;
   mimeType?: string;
+  // The video's description or caption, already trimmed and capped.
+  writtenText?: string | null;
 }): Promise<GeminiCallResult> {
   const parts: GeminiPart[] = [
     {
@@ -189,7 +191,7 @@ export async function callGeminiForVideoRecipeExtraction(video: {
         ...(video.mimeType ? { mime_type: video.mimeType } : {}),
       },
     },
-    { text: buildGeminiVideoPrompt() },
+    { text: buildGeminiVideoPrompt(video.writtenText ?? null) },
   ];
   return callGemini(SYSTEM_INSTRUCTION, parts, "video-extraction", GEMINI_VIDEO_TIMEOUT_MS, {
     mediaResolution: "MEDIA_RESOLUTION_LOW",

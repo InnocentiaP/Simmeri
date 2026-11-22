@@ -82,6 +82,8 @@ const MAX_PROCESSING_ROUNDS = 8;
 export async function importRecipeFromVideoFile(
   file: File,
   onPhase: (phase: VideoImportPhase) => void,
+  // A caption/description to combine with the video (optional).
+  writtenText?: string,
 ): Promise<ImportResult> {
   onPhase({ kind: "checking" });
   const mimeType = videoMimeTypeOf(file);
@@ -104,14 +106,21 @@ export async function importRecipeFromVideoFile(
 
   onPhase({ kind: "watching" });
   for (let round = 0; round < MAX_PROCESSING_ROUNDS; round++) {
-    const response = await extractRecipeFromVideo({ data: { kind: "upload", fileName } });
+    const response = await extractRecipeFromVideo({
+      data: { kind: "upload", fileName, writtenText: writtenText || undefined },
+    });
     if (response.status === "done") return response.result;
   }
   throw new Error("That video is taking too long to process. Try a shorter clip.");
 }
 
-export async function importRecipeFromYouTube(url: string): Promise<ImportResult> {
-  const response = await extractRecipeFromVideo({ data: { kind: "youtube", url } });
+export async function importRecipeFromYouTube(
+  url: string,
+  writtenText?: string,
+): Promise<ImportResult> {
+  const response = await extractRecipeFromVideo({
+    data: { kind: "youtube", url, writtenText: writtenText || undefined },
+  });
   if (response.status !== "done") throw new Error("Meri couldn't watch that video. Try again.");
   return response.result;
 }

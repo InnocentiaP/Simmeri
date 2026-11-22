@@ -8,6 +8,8 @@ import {
   isVideoOwnedBy,
   MAX_VIDEO_BYTES,
   parseYouTubeUrl,
+  prepareWrittenRecipeText,
+  MAX_WRITTEN_TEXT_CHARS,
 } from "./video-source.ts";
 
 const ID = "dQw4w9WgXcQ";
@@ -95,5 +97,26 @@ describe("isGeminiFileName", () => {
     assert.equal(isGeminiFileName("files/../models"), false);
     assert.equal(isGeminiFileName("models/gemini"), false);
     assert.equal(isGeminiFileName("files/abc?key=1"), false);
+  });
+});
+
+describe("prepareWrittenRecipeText", () => {
+  it("tidies spacing and blank lines", () => {
+    const raw = "Bahan:\r\n500 gr  daging sapi\r\n\r\n\r\n\r\n1.5 sdt garam   \n  2 sdt gula pasir";
+    assert.equal(
+      prepareWrittenRecipeText(raw),
+      "Bahan:\n500 gr daging sapi\n\n1.5 sdt garam\n2 sdt gula pasir",
+    );
+  });
+
+  it("drops text too short to hold a recipe", () => {
+    assert.equal(prepareWrittenRecipeText("Yummy! #bakso"), null);
+    assert.equal(prepareWrittenRecipeText(""), null);
+    assert.equal(prepareWrittenRecipeText(null), null);
+  });
+
+  it("caps very long descriptions", () => {
+    const long = "500 gr daging sapi\n".repeat(1000);
+    assert.equal(prepareWrittenRecipeText(long)?.length, MAX_WRITTEN_TEXT_CHARS);
   });
 });

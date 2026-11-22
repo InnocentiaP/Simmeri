@@ -125,3 +125,27 @@ export function isVideoOwnedBy(displayName: unknown, userId: string): boolean {
 export function isGeminiFileName(name: string): boolean {
   return /^files\/[a-z0-9-]{1,64}$/.test(name);
 }
+
+// ---------------------------------------------------------------------------
+// Written text that comes with a video (YouTube description, pasted caption)
+// ---------------------------------------------------------------------------
+
+export const MAX_WRITTEN_TEXT_CHARS = 6000;
+// Shorter than this can't hold an ingredient list ("Yummy! 🍜 #bakso").
+const MIN_WRITTEN_TEXT_CHARS = 30;
+
+// Tidies a description/caption before it is sent to AI alongside the video:
+// normalises line endings, collapses runs of blank lines and spaces, and caps
+// the length (recipes come first in descriptions; long tails are usually
+// links and sponsor text). Returns null when there is nothing useful.
+export function prepareWrittenRecipeText(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const tidy = text
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  if (tidy.length < MIN_WRITTEN_TEXT_CHARS) return null;
+  return tidy.length > MAX_WRITTEN_TEXT_CHARS ? tidy.slice(0, MAX_WRITTEN_TEXT_CHARS) : tidy;
+}
