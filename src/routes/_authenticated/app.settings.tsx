@@ -138,9 +138,12 @@ function Settings() {
                 onChange={(e) => setMeasurement(e.target.value)}
                 className="rounded-xl border border-border bg-background px-3 py-2 text-sm"
               >
-                <option value="metric">Metric</option>
-                <option value="us">US</option>
+                <option value="metric">Metric (grams, ml, °C)</option>
+                <option value="us">US (cups, oz, °F)</option>
               </select>
+              <span className="text-xs text-cocoa/60">
+                Recipe amounts are shown this way. You can switch on any recipe.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-cocoa">Timezone</span>

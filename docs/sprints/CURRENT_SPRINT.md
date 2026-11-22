@@ -11,7 +11,7 @@ The active roadmap closes the gap between what the landing page promises and wha
 | 0 | Revive infrastructure: resume Supabase project, verify schema, Gemini model update | Done |
 | 1 | Cooking loop: cooking rating ("loved it"), recipe favorites, confirmed post-cooking Kitchen update, "last time you cooked this" on recipe detail | **In review** (branch `feat/phase-1-cooking-loop`) |
 | 2 | Smart ingredient matching (read-time matcher, broader catalog, personal links) | **In review** (branch `feat/phase-2-ingredient-matching`) |
-| 2b | Measurement conversion on Recipe Detail (Original / Metric / US, default from Settings; cups→grams via per-ingredient density in the catalog) | Not started |
+| 2b | Measurement conversion on Recipe Detail (Original / Metric / US, default from Settings) | **In review** (branch `feat/phase-2b-unit-conversion`) |
 | 3 | Suggestions + Tonight's Deck: Wave 3 Checkpoints 3.4 + 3.5, dashboard suggestions, `/app/tonight` with swipe (via the installed `motion` library) layered on top of button + keyboard controls | **In review** — done before Phase 2 by owner request; recommendations use today's exact-name matching and improve automatically once Phase 2 lands |
 | 4 | Trust: data export, onboarding (kitchen staples), timezone actually applied | Not started |
 | 5 | Landing copy alignment (copy only, no redesign) for promises deferred below; also update `TonightsDeck.tsx` copy ("Three ideas", "short deck instead of an endless feed") to match the endless deck | Not started |
@@ -100,6 +100,14 @@ Design change from Wave 3 §C (stored `canonical_ingredient_id` on rows): matchi
 - Migration `20261017010000_ingredient_matching.sql`: `user_ingredient_links` (owner-only RLS) and a catalog expansion to 83 canonical ingredients / 220 aliases (English + Indonesian), validated for duplicate aliases and plural-stem collisions. Ambiguous words stay out (e.g. "cabai" alone, "pepper", "merica"/"lada", "cheese").
 - "I have this" on missing ingredients (Recipe Detail) links the name to a Kitchen item; Settings → "Ingredient matches" lists and removes links.
 - Degrades gracefully before the migration is applied (text + plural matching only).
+
+## Phase 2b — measurement conversion
+
+- Recipe Detail: Original / Metric / US toggle, defaulting to the Settings preference (`user_preferences.measurement_system`, previously stored but unused). Display only; recipes are never changed, and the original amount shows on hover.
+- `src/lib/units/convert.ts` (tested): cups / fl oz / pints / quarts ↔ ml / l, oz / lb ↔ g / kg, ranges and unicode fractions, unit hidden in the quantity ("2 cups"), kitchen-friendly rounding (metric steps of 1/5/10; US ¼ ⅓ ½ ⅔ ¾). Spoons (tsp/tbsp, sdt/sdm) are left as written.
+- Dry ingredients convert cups ↔ grams with a typical weight per cup (`src/lib/units/densities.ts`, keyed by catalog ingredient via the Phase 2 matcher) and are marked "≈"; liquids convert to ml.
+- Oven temperatures in steps convert °F ↔ °C, keeping the original in parentheses.
+- No migration: densities live in code; canonical keys come from the existing catalog.
 
 ## Working rules
 

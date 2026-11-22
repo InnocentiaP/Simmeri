@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import {
   getIngredientMatcher,
+  useCanonicalKeyOf,
   useIngredientMatcher,
 } from "@/lib/ingredients/use-ingredient-matcher";
 import {
@@ -30,6 +31,15 @@ import { CookingHistoryForm } from "@/components/app/CookingHistoryForm";
 import { CookingHistoryList } from "@/components/app/CookingHistoryList";
 import { LastCookedSummary } from "@/components/app/LastCookedSummary";
 import { IngredientLinkPicker } from "@/components/app/IngredientLinkPicker";
+import { MeasurementToggle } from "@/components/app/MeasurementToggle";
+import {
+  convertAmount,
+  convertTemperaturesInText,
+  detectMeasurementSystem,
+  type MeasurementSystem,
+} from "@/lib/units/convert";
+import { gramsPerCupFor } from "@/lib/units/densities";
+import { useMeasurementPreference } from "@/lib/units/use-measurement-preference";
 import { PostCookKitchenDialog } from "@/components/app/PostCookKitchenDialog";
 import { MealPlanEntryForm } from "@/components/app/MealPlanEntryForm";
 import { ShoppingGenerationReview } from "@/components/app/ShoppingGenerationReview";
@@ -73,6 +83,12 @@ function RecipeDetail() {
   const [showMarkCooked, setShowMarkCooked] = useState(false);
   const [showPostCookKitchen, setShowPostCookKitchen] = useState(false);
   const [linkingIngredient, setLinkingIngredient] = useState<string | null>(null);
+  // Amounts are shown in the Settings preference unless the user picks
+  // another system on this recipe (display only; the recipe isn't changed).
+  const preferredSystem = useMeasurementPreference();
+  const [chosenSystem, setChosenSystem] = useState<MeasurementSystem | null>(null);
+  const measureIn = chosenSystem ?? preferredSystem;
+  const canonicalKeyOf = useCanonicalKeyOf();
   const [showAddToPlan, setShowAddToPlan] = useState(false);
   const [generatedCandidates, setGeneratedCandidates] = useState<GeneratedCandidateItem[] | null>(
     null,
@@ -214,6 +230,26 @@ function RecipeDetail() {
     optional: [],
   };
   for (const ing of ingredients) grouped[ing.importance]?.push(ing);
+
+  const writtenIn = detectMeasurementSystem(
+    ingredients.map((i) => ({ quantityText: i.quantity_text ?? "", unit: i.unit ?? "" })),
+  );
+  const hasTemperatures = steps.some(
+    (s) =>
+      convertTemperaturesInText(s.instruction, "metric") !== s.instruction ||
+      convertTemperaturesInText(s.instruction, "us") !== s.instruction,
+  );
+  const showMeasurementToggle = writtenIn !== "none" || hasTemperatures;
+  const amountFor = (i: (typeof ingredients)[number]) =>
+    convertAmount(
+      {
+        quantityText: i.quantity_text ?? "",
+        unit: i.unit ?? "",
+        gramsPerCup: gramsPerCupFor(canonicalKeyOf?.(i.display_name) ?? null),
+      },
+      measureIn,
+    );
+  const anyApproximate = ingredients.some((i) => amountFor(i).approximate);
   const groupLabel: Record<string, string> = {
     core: "Core",
     supporting: "Supporting",
@@ -417,7 +453,24 @@ function RecipeDetail() {
       </section>
 
       <section className="mb-6 rounded-3xl border border-border/70 bg-background p-5">
-        <h2 className="mb-3 font-display text-xl font-semibold text-olive-deep">Ingredients</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-xl font-semibold text-olive-deep">Ingredients</h2>
+          {showMeasurementToggle && (
+            <MeasurementToggle value={measureIn} onChange={setChosenSystem} />
+          )}
+        </div>
+        {showMeasurementToggle &&
+          measureIn !== "original" &&
+          (writtenIn === "us" || writtenIn === "metric" || writtenIn === "mixed") &&
+          writtenIn !== measureIn && (
+            <p className="mb-3 text-xs text-cocoa/60">
+              Shown in {measureIn === "us" ? "US" : "metric"} measurements
+              {writtenIn === "mixed"
+                ? ""
+                : ` — this recipe was written in ${writtenIn === "us" ? "US" : "metric"}`}
+              .{anyApproximate && " ≈ amounts are estimated from typical cup weights."}
+            </p>
+          )}
         {ingredients.length === 0 && <p className="text-sm text-cocoa/60">No ingredients yet.</p>}
         {(["core", "supporting", "seasoning", "optional"] as const).map((key) =>
           grouped[key].length ? (
@@ -426,20 +479,29 @@ function RecipeDetail() {
                 {groupLabel[key]}
               </h3>
               <ul className="flex flex-col gap-1.5 text-sm text-cocoa">
-                {grouped[key].map((i) => (
-                  <li key={i.id}>
-                    <span className="font-medium">{i.display_name}</span>
-                    {(i.quantity_text || i.unit) && (
-                      <span className="text-cocoa/70">
-                        {" — "}
-                        {[i.quantity_text, i.unit].filter(Boolean).join(" ")}
-                      </span>
-                    )}
-                    {i.preparation_note && (
-                      <span className="text-cocoa/60"> ({i.preparation_note})</span>
-                    )}
-                  </li>
-                ))}
+                {grouped[key].map((i) => {
+                  const amount = amountFor(i);
+                  const original = [i.quantity_text, i.unit].filter(Boolean).join(" ");
+                  return (
+                    <li key={i.id}>
+                      <span className="font-medium">{i.display_name}</span>
+                      {(i.quantity_text || i.unit) && (
+                        <span
+                          className="text-cocoa/70"
+                          title={amount.changed ? `Original: ${original}` : undefined}
+                        >
+                          {" — "}
+                          {amount.changed
+                            ? `${amount.approximate ? "≈ " : ""}${amount.quantityText} ${amount.unit}`
+                            : original}
+                        </span>
+                      )}
+                      {i.preparation_note && (
+                        <span className="text-cocoa/60"> ({i.preparation_note})</span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null,
@@ -455,7 +517,9 @@ function RecipeDetail() {
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-olive-deep/10 text-xs font-medium text-olive-deep">
                 {i + 1}
               </span>
-              <p className="text-sm text-cocoa">{s.instruction}</p>
+              <p className="text-sm text-cocoa">
+                {convertTemperaturesInText(s.instruction, measureIn)}
+              </p>
             </li>
           ))}
         </ol>
